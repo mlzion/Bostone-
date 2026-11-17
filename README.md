@@ -1,2 +1,68 @@
-# Bostone-
-Boston-inspired guitar effects VST3 for REAPER, developed using C++ and JUCE. Prototyped using JSFX.
+# Bostone v0.1 — JSFX Preamp Foundation
+
+An original stereo preamp experiment inspired by Boston / Tom Scholz guitar tones.
+This is an exploratory signal chain, not an exact Rockman circuit model.
+Target: REAPER 7.x on Windows 11. No VST3, C++, or JUCE development is included.
+
+Input Gain → Pre-EQ → Drive / tanh soft clipping → Post-EQ → Output Gain.
+Each stage has its own enable switch; Master Bypass returns the dry stereo input
+following a 10 ms crossfade. The interface uses REAPER's standard JSFX sliders.
+
+## Install in REAPER on Windows 11
+
+1. In REAPER, choose **Options → Show REAPER resource path in explorer/finder**.
+   This is the authoritative location, including for portable installations.
+   A typical normal installation uses `%APPDATA%\REAPER`.
+2. Create `Effects\Bostone` inside that resource directory.
+3. Copy [Bostone_Preamp.jsfx](jsfx/Bostone_Preamp.jsfx) into it. Ensure Windows
+   has not appended `.txt` to the filename. No Python or other files are needed.
+4. Open a track's FX browser and choose **FX → Scan for new plugins** to refresh
+   the list. Search for `Bostone`; select **JS: Bostone v0.1 - Preamp Prototype**.
+   If it is not listed, close and reopen the FX browser, or restart REAPER.
+5. Start with a low monitor level. The default output is -6 dB, but large input
+   and EQ boosts can still exceed 0 dBFS. No final limiter is included.
+
+The JSFX **Edit** window should show no compilation error. See
+[manual testing](docs/testing.md) before treating the prototype as validated.
+
+## Controls
+
+| Section | Control | Range | Default |
+| --- | --- | --- | --- |
+| Input | Gain | -24 to +24 dB | 0 dB |
+| Input | Enable | Off / On | On |
+| Pre-EQ | Low Cut | 40–300 Hz | 80 Hz |
+| Pre-EQ | Low-Mid Gain | -12 to +12 dB | 0 dB |
+| Pre-EQ | Low-Mid Frequency | 150–1000 Hz | 400 Hz |
+| Pre-EQ | High Cut | 2000–15000 Hz | 10000 Hz |
+| Pre-EQ | Enable | Off / On | On |
+| Distortion | Drive | 1–20 | 3 |
+| Distortion | Enable | Off / On | On |
+| Post-EQ | Low Gain | -12 to +12 dB | 0 dB |
+| Post-EQ | Mid Gain | -12 to +12 dB | 0 dB |
+| Post-EQ | Mid Frequency | 400–4000 Hz | 1200 Hz |
+| Post-EQ | High Gain | -12 to +12 dB | 0 dB |
+| Post-EQ | Enable | Off / On | On |
+| Output | Gain | -24 to +12 dB | -6 dB |
+| Output | Enable | Off / On | On |
+| Global | Master Bypass | Off / On | Off |
+
+The added Input and Output Enable controls make gain stages independently
+bypassable. Drive 1 still applies tanh; use Distortion Enable to remove it.
+
+## Offline checks
+
+With Python 3.9 or newer, from the repository root:
+
+```console
+python -m unittest discover -s tests -v
+```
+
+Only the Python standard library is required. This is a separate numerical
+reference model, not an EEL2 interpreter or REAPER host. It cannot establish
+JSFX compilation, automation integration, audible quality, or CPU performance.
+The same command also runs conservative compatibility checks on the actual JSFX
+source. See [syntax corrections and runtime status](CHANGELOG.md).
+
+See [signal chain](docs/signal-chain.md), [DSP notes](docs/dsp-notes.md),
+[source register](docs/source-register.md), and [test procedure](docs/testing.md).
