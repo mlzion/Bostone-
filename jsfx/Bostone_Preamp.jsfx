@@ -65,14 +65,14 @@ function smooth() instance(b0,b1,b2,a1,a2,tb0,tb1,tb2,ta1,ta2) (
 // Direct form I avoids state reinterpretation when coefficients move.
 function left(x) instance(b0,b1,b2,a1,a2,x1l,x2l,y1l,y2l) local(y) (
   y=b0*x+b1*x1l+b2*x2l-a1*y1l-a2*y2l;
-  (y != y || abs(y)>1e12) ? (x1l=x2l=y1l=y2l=0; y=0;);
-  abs(y)<1e-30 ? y=0;
+  (y != y || abs(y)>1000000000000) ? (x1l=x2l=y1l=y2l=0; y=0;);
+  abs(y)<0.000000000000000000000000000001 ? y=0;
   x2l=x1l; x1l=x; y2l=y1l; y1l=y; y;
 );
 function right(x) instance(b0,b1,b2,a1,a2,x1r,x2r,y1r,y2r) local(y) (
   y=b0*x+b1*x1r+b2*x2r-a1*y1r-a2*y2r;
-  (y != y || abs(y)>1e12) ? (x1r=x2r=y1r=y2r=0; y=0;);
-  abs(y)<1e-30 ? y=0;
+  (y != y || abs(y)>1000000000000) ? (x1r=x2r=y1r=y2r=0; y=0;);
+  abs(y)<0.000000000000000000000000000001 ? y=0;
   x2r=x1r; x1r=x; y2r=y1r; y1r=y; y;
 );
 function mix(dry,wet,m) (dry+(wet-dry)*m;);
@@ -105,8 +105,8 @@ bypass_step=1/(0.010*srate);
 @sample
 // Non-finite / pathological host input is contained before it reaches feedback.
 dry_l=spl0; dry_r=spl1;
-(dry_l != dry_l || abs(dry_l)>1e12) ? dry_l=0;
-(dry_r != dry_r || abs(dry_r)>1e12) ? dry_r=0;
+(dry_l != dry_l || abs(dry_l)>1000000000000) ? dry_l=0;
+(dry_r != dry_r || abs(dry_r)>1000000000000) ? dry_r=0;
 in_g+=smooth_a*(in_t-in_g); out_g+=smooth_a*(out_t-out_g); drive_g+=smooth_a*(drive_t-drive_g);
 // Linear 10 ms ramps reach exact bypass endpoints, enabling exact dry comparisons.
 pre_m+=bounded(pre_t-pre_m,-bypass_step,bypass_step);

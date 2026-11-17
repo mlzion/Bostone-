@@ -61,6 +61,8 @@ python -m unittest discover -s tests -v
 Only the Python standard library is required. This is a separate numerical
 reference model, not an EEL2 interpreter or REAPER host. It cannot establish
 JSFX compilation, automation integration, audible quality, or CPU performance.
+The same command also runs conservative compatibility checks on the actual JSFX
+source. See [syntax corrections and runtime status](CHANGELOG.md).
 
 See [signal chain](docs/signal-chain.md), [DSP notes](docs/dsp-notes.md),
 [source register](docs/source-register.md), and [test procedure](docs/testing.md).

@@ -72,3 +72,24 @@ has no final limiter. A listening verdict is needed before planning the JUCE por
 | REAPER build / Windows build | Rate / block size | Procedure | Result / notes |
 | --- | --- | --- | --- |
 | Not yet tested | — | All manual steps | Pending user validation |
+
+## Syntax-correction follow-up (2026-11-17)
+
+The suite now also checks the actual `.jsfx` files for scientific literals,
+caret operators, mismatched parentheses/brackets, and case-insensitive variable
+collisions. Regression fixtures verify detection in `@init`, `@slider`, `@block`,
+and `@sample`; comments and quoted text are ignored. Decimal replacements are
+checked for numeric equivalence. This lint is intentionally conservative and
+cannot guarantee EEL2 compilation or validate all syntax and function APIs.
+
+The user reports successful REAPER 7.47 / Windows 11 operation after manual
+syntax fixes. The manually edited file was not available for comparison. The
+repository revision replaces all scientific literals and needs its own host
+retest: install this exact PR version, confirm no JSFX editor errors, exercise
+all 17 sliders and stage/master bypass switches, and verify stereo audio.
+REAPER is not installed in this development workspace, so no runtime validation
+of this revision was performed here. Keep PR #1 unmerged until that retest passes.
+See [changelog](../CHANGELOG.md) for the exact scope of corrections.
+
+After these corrections, all 14 tests passed on 2026-11-17 (the original nine
+numerical/source-contract cases plus five compatibility regression cases).
