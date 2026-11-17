@@ -21,3 +21,13 @@ exact circuit recreation is claimed. No assets are bundled.
 No project-wide redistribution license is selected by this change. The repository
 owner should choose one explicitly; citing mathematical references does not
 license this project's source under a third-party implementation's license.
+
+## Plexi v0.3
+
+See [Plexi research register](plexi-v0.3-references.md) for the required Marshall
+schematic, both supplied circuit analyses, official EEL2 docs, selected values,
+source-access limitations and explicit substitutions. Unlike the initial v0.1
+register, these references were retrieved and reviewed during development.
+The passive nodal/companion solver, biased preamp, differential power curves and
+independent numerical/AC tests are original implementations of mathematical
+techniques. No code, models, images, IRs or recordings are copied from the sites.

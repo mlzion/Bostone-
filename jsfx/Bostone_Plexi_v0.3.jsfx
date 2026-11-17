@@ -1,0 +1,156 @@
+desc:Bostone Plexi v0.3
+// Original experimental behavioral amplifier. No cabinet / no custom oversampling.
+// Circuit choices, substitutions and limitations: docs/plexi-v0.3-dsp.md.
+in_pin:Left
+in_pin:Right
+out_pin:Left
+out_pin:Right
+slider1:1<0,1,1{Bypass,Enabled}>Amp Enable
+slider2:0<-24,24,0.1>Input Gain (dB)
+slider3:6<0,36,0.1>Preamp Drive (dB)
+slider4:5<0,10,0.01>Bass
+slider5:5<0,10,0.01>Middle
+slider6:5<0,10,0.01>Treble
+slider7:4<0,10,0.01>Presence
+slider8:3<0,24,0.1>Power Drive (dB)
+slider9:5<0,10,0.01>Bass Tightness
+slider10:-12<-36,0,0.1>Output Level (dB)
+
+@init
+function finite(x) ((x-x) === 0;);
+function bound(x,lo,hi) (finite(x) ? min(hi,max(lo,x)) : lo;);
+function db(x) (exp(log(10)*x/20););
+function soft(x) local(e) (e=exp(-2*abs(x)); (x<0 ? -1 : 1)*(1-e)/(1+e););
+function triode(x,bias,z0) (soft(x+bias)-z0;);
+function rational(x) (x/(1+abs(x)););
+// Smooth positive conduction, then finite plate-current ceiling. Not a tube law.
+function current(x) local(q) (q=max(0,x)+log(1+exp(-abs(x))); q/(1+q););
+function pole(f) (1-exp(-2*$pi*min(f,0.45*srate)/srate););
+
+// Passive tone stack: S=0,T=1,B=2,W=3,O=4. mat holds a 5x10 augmented matrix.
+// Ideal low-Z source. Treble 220k, Bass 1M, split Middle 25k, 2M load.
+// Upper middle track is in series with Bass; its junction can be eliminated.
+function stamp(i,j,g) (
+  mat[i*10+i]+=g;
+  j>=0 ? (mat[j*10+j]+=g; mat[i*10+j]-=g; mat[j*10+i]-=g;);
+);
+function rebuild() local(i,j,k,p,f,rb,rm,rt1,rt2) (
+  i=0; loop(50,mat[i]=0; i+=1;);
+  i=0; loop(5,mat[i*10+5+i]=1; i+=1;);
+  rb=max(100,1000000*bass_g*bass_g)+max(25,25000*(1-mid_g));
+  rm=max(25,25000*mid_g);
+  rt1=max(100,220000*(1-treble_g)); rt2=max(100,220000*treble_g);
+  stamp(0,-1,1/33000); stamp(1,-1,ct_g);
+  stamp(0,2,cb_g); stamp(0,3,cm_g);
+  stamp(2,3,1/rb); stamp(3,-1,1/rm);
+  stamp(1,4,1/rt1); stamp(4,2,1/rt2); stamp(4,-1,1/2000000);
+  // Positive definite conductance matrix; positive pivots, no audio-rate iteration.
+  k=0; loop(5,
+    p=max(0.000000000001,mat[k*10+k]);
+    j=0; loop(10,mat[k*10+j]/=p; j+=1;);
+    i=0; loop(5,
+      i!=k ? (f=mat[i*10+k]; j=0; loop(10,mat[i*10+j]-=f*mat[k*10+j]; j+=1;););
+      i+=1;
+    );
+    k+=1;
+  );
+  i=0; loop(5,j=0; loop(5,inv[i*5+j]=mat[i*10+5+j]; j+=1;); i+=1;);
+  last_b=bass_g; last_m=mid_g; last_t=treble_g;
+);
+function reset() instance(inlo,inhi,brightlo,couplo,dcpre,dcpost,preslo,out1,out2,env,ht,hb,hm) (
+  inlo=inhi=brightlo=couplo=dcpre=dcpost=preslo=out1=out2=env=ht=hb=hm=0;
+);
+function amp(x) instance(inlo,inhi,brightlo,couplo,dcpre,dcpost,preslo,out1,out2,env,ht,hb,hm)
+local(v,rs,rt,rb,rw,vs,vt,vb,vw,vo,pa,pb,rail,target,rate,y) (
+  // 1. Input conditioning and bright-channel cathode-bypass-inspired tilt.
+  v=bound(x,-16,16)*input_g;
+  inlo+=input_hp*(v-inlo); v-=inlo;
+  inhi+=input_lp*(v-inhi); v=inhi;
+  brightlo+=bright_p*(v-brightlo); v+=0.9*(v-brightlo);
+  // 2. Biased first preamp triode; zero-input offset is removed analytically.
+  v=triode(0.8*pre_g*v,0.22,pre_zero);
+  // 3. Coupling / tightness BEFORE later nonlinear stages.
+  couplo+=tight_g*(v-couplo); v-=couplo;
+  // 4. Different hot second-stage curve; DC coupling correction follows.
+  v=rational(3*v+0.1)-rational(0.1);
+  dcpre+=dc_p*(v-dcpre); v-=dcpre;
+  // 5. Trapezoidal capacitor companions; two channels share inverse, not histories.
+  rs=v/33000-hb-hm; rt=ct_g*v-ht; rb=hb; rw=hm;
+  vs=inv[0]*rs+inv[1]*rt+inv[2]*rb+inv[3]*rw;
+  vt=inv[5]*rs+inv[6]*rt+inv[7]*rb+inv[8]*rw;
+  vb=inv[10]*rs+inv[11]*rt+inv[12]*rb+inv[13]*rw;
+  vw=inv[15]*rs+inv[16]*rt+inv[17]*rb+inv[18]*rw;
+  vo=inv[20]*rs+inv[21]*rt+inv[22]*rb+inv[23]*rw;
+  ht=-2*ct_g*(vt-v)-ht; hb=-2*cb_g*(vs-vb)-hb; hm=-2*cm_g*(vs-vw)-hm;
+  // 6. Modest loss recovery, then unequal long-tail-pair-inspired phase branches.
+  v=3*vo;
+  pa=triode(2*v,0.04,pi_zero); pb=triode(-1.9*v,0.04,pi_zero);
+  // 7. Independent per-channel load memory: fixed modest sag surrogate.
+  target=0.5*(abs(pa)+abs(pb)); rate=target>env ? sag_attack : sag_release;
+  env+=rate*(target-env); rail=1/(1+0.18*env);
+  v=2*rail*(current(3*(power_g*pa-0.1))-current(3*(power_g*pb-0.1)));
+  // 8. DC removal; feed-forward surrogate of reduced high-frequency feedback.
+  dcpost+=dc_p*(v-dcpost); v-=dcpost;
+  preslo+=presence_p*(v-preslo); v+=presence_g*(v-preslo);
+  out1+=output_p*(v-out1); out2+=output_p*(out1-out2);
+  // 9. Explicit bounded safety saturation before the user's nonpositive output gain.
+  y=0.8*soft(out2/0.8)*output_g;
+  !finite(y) || abs(ht)>1000000 || abs(hb)>1000000 || abs(hm)>1000000 ? (
+    inlo=inhi=brightlo=couplo=dcpre=dcpost=preslo=out1=out2=env=ht=hb=hm=0; y=0;
+  );
+  abs(inlo)<0.000000000000000000000000000001 ? inlo=0;
+  abs(inhi)<0.000000000000000000000000000001 ? inhi=0;
+  abs(brightlo)<0.000000000000000000000000000001 ? brightlo=0;
+  abs(couplo)<0.000000000000000000000000000001 ? couplo=0;
+  abs(dcpre)<0.000000000000000000000000000001 ? dcpre=0;
+  abs(dcpost)<0.000000000000000000000000000001 ? dcpost=0;
+  abs(preslo)<0.000000000000000000000000000001 ? preslo=0;
+  abs(out1)<0.000000000000000000000000000001 ? out1=0;
+  abs(out2)<0.000000000000000000000000000001 ? out2=0;
+  abs(env)<0.000000000000000000000000000001 ? env=0;
+  abs(ht)<0.000000000000000000000000000001 ? ht=0;
+  abs(hb)<0.000000000000000000000000000001 ? hb=0;
+  abs(hm)<0.000000000000000000000000000001 ? hm=0;
+  y;
+);
+pre_zero=soft(0.22); pi_zero=soft(0.04);
+mat=0; inv=64;
+ct_g=2*srate*0.0000000005; cb_g=cm_g=2*srate*0.000000022;
+input_hp=pole(35); input_lp=pole(18000); bright_p=pole(190);
+dc_p=pole(10); presence_p=pole(1200); output_p=pole(10000);
+smooth_a=1-exp(-1/(0.020*srate)); ramp=1/(0.010*srate);
+sag_attack=1-exp(-1/(0.010*srate)); sag_release=1-exp(-1/(0.150*srate));
+lchan.reset(); rchan.reset(); initialized=0; counter=0; pdc_delay=0;
+
+@slider
+enable_t=slider1>=0.5;
+input_t=db(bound(slider2,-24,24)); pre_t=db(bound(slider3,0,36));
+bass_t=bound(slider4,0,10)/10; mid_t=bound(slider5,0,10)/10; treble_t=bound(slider6,0,10)/10;
+presence_t=1.2*bound(slider7,0,10)/10; power_t=db(bound(slider8,0,24));
+tight_t=pole(70*exp(log(300/70)*bound(slider9,0,10)/10)); output_t=db(bound(slider10,-36,0));
+!initialized ? (
+  enable_g=enable_t; input_g=input_t; pre_g=pre_t;
+  bass_g=bass_t; mid_g=mid_t; treble_g=treble_t;
+  presence_g=presence_t; power_g=power_t; tight_g=tight_t; output_g=output_t;
+  rebuild(); initialized=1;
+);
+
+@sample
+// Finite dry samples are preserved at bypass, including samples outside nominal audio range.
+dry_l=finite(spl0) ? spl0 : 0; dry_r=finite(spl1) ? spl1 : 0;
+input_g+=smooth_a*(input_t-input_g); pre_g+=smooth_a*(pre_t-pre_g);
+bass_g+=smooth_a*(bass_t-bass_g); mid_g+=smooth_a*(mid_t-mid_g); treble_g+=smooth_a*(treble_t-treble_g);
+presence_g+=smooth_a*(presence_t-presence_g); power_g+=smooth_a*(power_t-power_g);
+tight_g+=smooth_a*(tight_t-tight_g); output_g+=smooth_a*(output_t-output_g);
+enable_g+=bound(enable_t-enable_g,-ramp,ramp);
+counter+=1;
+counter>=16 ? (
+  counter=0;
+  abs(bass_g-last_b)+abs(mid_g-last_m)+abs(treble_g-last_t)>0.0000001 ? rebuild();
+);
+// Keep both amplifiers running in bypass, avoiding stale tails on re-enable.
+wet_l=lchan.amp(dry_l); wet_r=rchan.amp(dry_r);
+enable_g === 0 ? (spl0=dry_l; spl1=dry_r;) : (
+  spl0=(1-enable_g)*dry_l+enable_g*wet_l;
+  spl1=(1-enable_g)*dry_r+enable_g*wet_r;
+);
