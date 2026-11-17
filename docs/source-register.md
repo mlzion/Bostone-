@@ -21,3 +21,13 @@ exact circuit recreation is claimed. No assets are bundled.
 No project-wide redistribution license is selected by this change. The repository
 owner should choose one explicitly; citing mathematical references does not
 license this project's source under a third-party implementation's license.
+
+## v0.2 additions
+
+The optional constant-peak band-pass uses the RBJ mathematical reference above;
+its coefficient expressions are independently written. Cascaded tanh,
+interstage RBJ filtering, and partial sqrt(gain) level compensation are original
+project combinations of established techniques. No implementation code or audio
+assets were imported. Flextron is an external comparison effect only: it is not
+bundled, called, reverse engineered, or required by Bostone. The offline model
+uses only Python's standard library. v0.1 production source remains unchanged.
