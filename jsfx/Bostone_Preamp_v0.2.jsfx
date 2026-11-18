@@ -1,0 +1,171 @@
+desc:Bostone Preamp v0.2
+// Original implementation; mathematical references: docs/source-register.md.
+// Stereo, zero latency; no oversampling. See docs/dsp-notes.md.
+in_pin:Left
+in_pin:Right
+out_pin:Left
+out_pin:Right
+slider1:0<-24,24,0.1>Input Gain (dB)
+slider2:80<40,300,1>Pre Low Cut (Hz)
+slider3:0<-12,12,0.1>Pre Low-Mid Gain (dB)
+slider4:400<150,1000,1>Pre Low-Mid Frequency (Hz)
+slider5:10000<400,15000,1>Pre High Cut (Hz)
+slider6:1<0,1,1{Off,On}>Pre-EQ Enable
+slider7:3<1,20,0.01>Drive
+slider8:1<0,1,1{Off,On}>Distortion Enable
+slider9:0<-12,12,0.1>Post Low Gain (dB)
+slider10:0<-12,12,0.1>Post Mid Gain (dB)
+slider11:1200<400,4000,1>Post Mid Frequency (Hz)
+slider12:0<-12,12,0.1>Post High Gain (dB)
+slider13:1<0,1,1{Off,On}>Post-EQ Enable
+slider14:-6<-24,12,0.1>Output Gain (dB)
+slider15:0<0,1,1{Off,On}>Master Bypass
+slider16:1<0,1,1{Off,On}>Input Gain Enable
+slider17:1<0,1,1{Off,On}>Output Gain Enable
+
+// Appended controls preserve all v0.1 indices and defaults.
+slider18:0<0,1,1{Legacy HP Bell LP,Band-pass}>Pre-EQ Mode
+slider19:685<150,4000,1>Band-pass Center (Hz)
+slider20:1<0.25,4,0.01>Band-pass Q
+slider21:0<-12,12,0.1>Band-pass Level (dB)
+slider22:0<0,1,1{Legacy Tanh,Cascaded}>Drive Mode
+slider23:12<0,18,0.1>Cascade Stage Gain (dB)
+slider24:6000<800,12000,1>Cascade Interstage Cut (Hz)
+slider25:0<-12,12,0.1>Cascade Level Trim (dB)
+
+@init
+// Each instance has its own coefficients and independent channel histories.
+function bounded(x, lo, hi) (x == x ? min(hi,max(lo,x)) : lo;);
+function db(x) (exp(x * log(10)/20););
+// EEL2 has no portable built-in tanh: bounded-exponent mathematical identity.
+function tanh(x) local(e) (e=exp(-2*abs(x)); (x < 0 ? -1 : 1)*(1-e)/(1+e););
+function clear() instance(x1l,x2l,y1l,y2l,x1r,x2r,y1r,y2r) (
+  x1l=x2l=y1l=y2l=x1r=x2r=y1r=y2r=0;
+);
+// RBJ normalized biquads. type: 0 HP, 1 LP, 2 bell, 3 low shelf, 4 high shelf.
+function target(type,f,g) instance(tb0,tb1,tb2,ta1,ta2)
+local(w,c,s,a,amp,b0,b1,b2,a0,a1,a2,k) (
+  f=bounded(f,10,0.45*srate); w=2*$pi*f/srate; c=cos(w); s=sin(w);
+  amp=exp(g*log(10)/40); a=s/(2*sqrt(0.5));
+  type == 0 ? (b0=(1+c)/2; b1=-(1+c); b2=b0; a0=1+a; a1=-2*c; a2=1-a;) :
+  type == 1 ? (b0=(1-c)/2; b1=1-c; b2=b0; a0=1+a; a1=-2*c; a2=1-a;) :
+  type == 2 ? (
+    a=s/2; // Bell Q = 1.
+    b0=1+a*amp; b1=-2*c; b2=1-a*amp; a0=1+a/amp; a1=-2*c; a2=1-a/amp;
+  ) : (
+    // Shelf slope S = 1, equivalent alpha = sin(w)/sqrt(2).
+    k=2*sqrt(amp)*a;
+    type == 3 ? (
+      b0=amp*((amp+1)-(amp-1)*c+k); b1=2*amp*((amp-1)-(amp+1)*c); b2=amp*((amp+1)-(amp-1)*c-k);
+      a0=(amp+1)+(amp-1)*c+k; a1=-2*((amp-1)+(amp+1)*c); a2=(amp+1)+(amp-1)*c-k;
+    ) : (
+      b0=amp*((amp+1)+(amp-1)*c+k); b1=-2*amp*((amp-1)+(amp+1)*c); b2=amp*((amp+1)+(amp-1)*c-k);
+      a0=(amp+1)-(amp-1)*c+k; a1=2*((amp-1)-(amp+1)*c); a2=(amp+1)-(amp-1)*c-k;
+    );
+  );
+  tb0=b0/a0; tb1=b1/a0; tb2=b2/a0; ta1=a1/a0; ta2=a2/a0;
+);
+// Constant-peak RBJ band-pass; center level is applied separately.
+function bandtarget(f,q) instance(tb0,tb1,tb2,ta1,ta2) local(w,c,a,norm) (
+  f=bounded(f,10,0.45*srate); q=bounded(q,0.25,4);
+  w=2*$pi*f/srate; c=cos(w); a=sin(w)/(2*q); norm=1+a;
+  tb0=a/norm; tb1=0; tb2=-a/norm; ta1=-2*c/norm; ta2=(1-a)/norm;
+);
+function snap() instance(b0,b1,b2,a1,a2,tb0,tb1,tb2,ta1,ta2) (
+  b0=tb0; b1=tb1; b2=tb2; a1=ta1; a2=ta2;
+);
+function smooth() instance(b0,b1,b2,a1,a2,tb0,tb1,tb2,ta1,ta2) (
+  b0+=smooth_a*(tb0-b0); b1+=smooth_a*(tb1-b1); b2+=smooth_a*(tb2-b2);
+  a1+=smooth_a*(ta1-a1); a2+=smooth_a*(ta2-a2);
+);
+// Direct form I avoids state reinterpretation when coefficients move.
+function left(x) instance(b0,b1,b2,a1,a2,x1l,x2l,y1l,y2l) local(y) (
+  y=b0*x+b1*x1l+b2*x2l-a1*y1l-a2*y2l;
+  (y != y || abs(y)>1000000000000) ? (x1l=x2l=y1l=y2l=0; y=0;);
+  abs(y)<0.000000000000000000000000000001 ? y=0;
+  x2l=x1l; x1l=x; y2l=y1l; y1l=y; y;
+);
+function right(x) instance(b0,b1,b2,a1,a2,x1r,x2r,y1r,y2r) local(y) (
+  y=b0*x+b1*x1r+b2*x2r-a1*y1r-a2*y2r;
+  (y != y || abs(y)>1000000000000) ? (x1r=x2r=y1r=y2r=0; y=0;);
+  abs(y)<0.000000000000000000000000000001 ? y=0;
+  x2r=x1r; x1r=x; y2r=y1r; y1r=y; y;
+);
+function mix(dry,wet,m) (dry+(wet-dry)*m;);
+initialized=0;
+pre_hp.clear(); pre_bell.clear(); pre_lp.clear();
+post_low.clear(); post_mid.clear(); post_high.clear();
+pre_band.clear(); interstage.clear();
+pdc_delay=0;
+
+@slider
+// Clamp all DSP targets, including automation values outside the advertised range.
+in_t=db(bounded(slider1,-24,24)); out_t=db(bounded(slider14,-24,12));
+drive_t=bounded(slider7,1,20);
+pre_t=slider6>=0.5; dist_t=slider8>=0.5; post_t=slider13>=0.5;
+master_t=slider15>=0.5; input_t=slider16>=0.5; output_t=slider17>=0.5;
+pre_hp.target(0,bounded(slider2,40,300),0);
+pre_bell.target(2,bounded(slider4,150,1000),bounded(slider3,-12,12));
+pre_lp.target(1,bounded(slider5,400,15000),0);
+post_low.target(3,150,bounded(slider9,-12,12));
+post_mid.target(2,bounded(slider11,400,4000),bounded(slider10,-12,12));
+post_high.target(4,4000,bounded(slider12,-12,12));
+pre_band.bandtarget(bounded(slider19,150,4000),bounded(slider20,0.25,4));
+interstage.target(1,bounded(slider24,800,12000),0);
+band_t=slider18>=0.5; strong_t=slider22>=0.5;
+band_level_t=db(bounded(slider21,-12,12));
+stage_t=db(bounded(slider23,0,18)); trim_t=db(bounded(slider25,-12,12));
+smooth_a=1-exp(-1/(0.020*srate));
+bypass_step=1/(0.010*srate);
+!initialized ? (
+  pre_hp.snap(); pre_bell.snap(); pre_lp.snap(); post_low.snap(); post_mid.snap(); post_high.snap();
+  in_g=in_t; out_g=out_t; drive_g=drive_t;
+  pre_m=pre_t; dist_m=dist_t; post_m=post_t; master_m=master_t; input_m=input_t; output_m=output_t;
+  pre_band.snap(); interstage.snap();
+  band_m=band_t; strong_m=strong_t;
+  band_level_g=band_level_t; stage_g=stage_t; trim_g=trim_t;
+  initialized=1;
+);
+
+@sample
+// Non-finite / pathological host input is contained before it reaches feedback.
+dry_l=spl0; dry_r=spl1;
+(dry_l != dry_l || abs(dry_l)>1000000000000) ? dry_l=0;
+(dry_r != dry_r || abs(dry_r)>1000000000000) ? dry_r=0;
+in_g+=smooth_a*(in_t-in_g); out_g+=smooth_a*(out_t-out_g); drive_g+=smooth_a*(drive_t-drive_g);
+band_level_g+=smooth_a*(band_level_t-band_level_g);
+stage_g+=smooth_a*(stage_t-stage_g); trim_g+=smooth_a*(trim_t-trim_g);
+band_m+=bounded(band_t-band_m,-bypass_step,bypass_step);
+strong_m+=bounded(strong_t-strong_m,-bypass_step,bypass_step);
+pre_band.smooth(); interstage.smooth();
+// Linear 10 ms ramps reach exact bypass endpoints, enabling exact dry comparisons.
+pre_m+=bounded(pre_t-pre_m,-bypass_step,bypass_step);
+dist_m+=bounded(dist_t-dist_m,-bypass_step,bypass_step);
+post_m+=bounded(post_t-post_m,-bypass_step,bypass_step);
+master_m+=bounded(master_t-master_m,-bypass_step,bypass_step);
+input_m+=bounded(input_t-input_m,-bypass_step,bypass_step);
+output_m+=bounded(output_t-output_m,-bypass_step,bypass_step);
+pre_hp.smooth(); pre_bell.smooth(); pre_lp.smooth(); post_low.smooth(); post_mid.smooth(); post_high.smooth();
+// Input gain -> pre-EQ. Filters keep running while bypassed to avoid stale tails.
+l=dry_l*mix(1,in_g,input_m); r=dry_r*mix(1,in_g,input_m);
+wl=pre_lp.left(pre_bell.left(pre_hp.left(l)));
+wr=pre_lp.right(pre_bell.right(pre_hp.right(r)));
+// Alternative wet paths, not a stacked band-pass. Both stay warm.
+bl=pre_band.left(l)*band_level_g; br=pre_band.right(r)*band_level_g;
+band_m > 0 ? (wl=mix(wl,bl,band_m); wr=mix(wr,br,band_m););
+l=mix(l,wl,pre_m); r=mix(r,wr,pre_m);
+// Drive is a multiplier into tanh, without unity normalization or auto makeup.
+legacy_l=tanh(drive_g*l); legacy_r=tanh(drive_g*r);
+// Optional second clip with interstage bandwidth reduction and partial makeup.
+// This reduces some high-frequency energy; it is NOT oversampling/alias removal.
+strong_l=tanh(stage_g*interstage.left(legacy_l))*trim_g/sqrt(stage_g);
+strong_r=tanh(stage_g*interstage.right(legacy_r))*trim_g/sqrt(stage_g);
+clip_l=legacy_l; clip_r=legacy_r;
+strong_m > 0 ? (clip_l=mix(legacy_l,strong_l,strong_m); clip_r=mix(legacy_r,strong_r,strong_m););
+l=mix(l,clip_l,dist_m); r=mix(r,clip_r,dist_m);
+wl=post_high.left(post_mid.left(post_low.left(l)));
+wr=post_high.right(post_mid.right(post_low.right(r)));
+l=mix(l,wl,post_m); r=mix(r,wr,post_m);
+l*=mix(1,out_g,output_m); r*=mix(1,out_g,output_m);
+spl0=master_m == 1 ? dry_l : mix(l,dry_l,master_m);
+spl1=master_m == 1 ? dry_r : mix(r,dry_r,master_m);

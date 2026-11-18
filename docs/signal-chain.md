@@ -33,3 +33,21 @@ There is no added latency, lookahead, cabinet, chorus, delay, compression,
 noise gate, stereo widening, or oversampling in this version. A bypass crossfade
 can temporarily change the frequency response because filtered and dry signals
 have different phase. This is expected for this prototype.
+
+## v0.2 routing
+
+v0.1 above is unchanged. v0.2 is a separate file/FX identity:
+
+Input Gain → selected Pre-EQ → selected Drive → Post-EQ → Output Gain.
+
+- Pre-EQ Legacy: original HP → bell → LP; LP range now reaches 400 Hz.
+- Pre-EQ Band-pass: a single constant-peak band-pass → center level.
+  It receives the same input as the legacy path, not that path's output.
+- Drive Legacy: original tanh(Drive × input).
+- Drive Cascaded: that first tanh → interstage LP (Q≈0.707) →
+  tanh(Stage Gain × filtered signal) → partial gain compensation → trim.
+
+Both selectors default to Legacy. Existing section Enable controls apply to
+either mode, and Master Bypass still returns dry input. All paths keep running
+while bypassed for current histories; mode switches use 10 ms crossfades.
+The sustainer is deferred; no compressor or noise gate is in the v0.2 chain.
