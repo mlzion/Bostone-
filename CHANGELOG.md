@@ -1,5 +1,18 @@
 # Changelog
 
+## Bostone Preamp v0.2.1 — expanded EQ range (2026-11-18)
+
+- Added separate `Bostone_Preamp_v0.2.1.jsfx` / `Bostone Preamp v0.2.1` identity.
+- Extended Pre Low Cut from 40–300 to 40–1000 Hz and Pre Low-Mid Frequency
+  from 150–1000 to 150–2000 Hz; reduced Pre High Cut maximum to 10000 Hz.
+  Updated both declarations and internal DSP clamps, retaining all defaults.
+- Preserved every other v0.2 processing expression, slope, gain range, mode,
+  smoothing and bypass behavior. v0.1, v0.2 and standalone Plexi are unchanged.
+- Added source-identity, endpoint/response, shared-setting equivalence,
+  stability/automation and bypass tests plus installation/manual host checks.
+- REAPER runtime compilation/listening/click verification remain pending;
+  offline numerical and syntax checks do not establish host compatibility.
+
 ## Bostone Plexi v0.3 — standalone amp prototype (2026-11-17)
 
 - Added separately installable `Bostone_Plexi_v0.3.jsfx`, displayed as
