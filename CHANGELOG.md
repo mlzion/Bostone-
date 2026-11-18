@@ -1,5 +1,24 @@
 # Changelog
 
+## Bostone Plexi v0.4 — integrated cabinet IR (2026-11-18)
+
+- Added separate `Bostone_Plexi_v0.4.jsfx`, preserving the v0.3 amp's original
+  functions, initialization, controls/defaults and sample-processing code.
+- Added bounded mono/stereo WAV loading, native requested-rate decoding/SRC,
+  explicit raw/fixed attenuation/linked peak modes, IR level, wet/dry, wet-only
+  HP/LP, user-selected tail crop, saved filename and cabinet bypass.
+- Added original 64-frame partitioned FFT overlap-add with fixed 64-sample
+  latency/PDC and aligned bypass. IR timing and raw gain are retained; no
+  default peak normalization, onset shift, silent truncation or limiter.
+- Added native Data/BostoneIR selector and text status/reload area. Synchronous
+  replacements queue until stopped/faded; missing/invalid/oversized IRs fail
+  safely to aligned amp-only output. Capacity is 32768 processed IR frames.
+- Added synthetic fixture/numerical/source tests, usage instructions, researched
+  ReaVerb mappings, and explicit decoder/filter/SRC/runtime matching limits.
+- No v0.3 changes, cabinet assets, waveform display, custom skin, hum removal,
+  extra amplifier modeling or automatic merge. REAPER runtime/listening/CPU
+  and exact ReaVerb parity remain pending.
+
 ## Bostone Plexi v0.3 — standalone amp prototype (2026-11-17)
 
 - Added separately installable `Bostone_Plexi_v0.3.jsfx`, displayed as

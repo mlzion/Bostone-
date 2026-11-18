@@ -41,3 +41,13 @@ register, these references were retrieved and reviewed during development.
 The passive nodal/companion solver, biased preamp, differential power curves and
 independent numerical/AC tests are original implementations of mathematical
 techniques. No code, models, images, IRs or recordings are copied from the sites.
+
+## Plexi v0.4 cabinet engine
+
+See [v0.4 research and technical notes](plexi-v0.4-technical.md) for the official
+JSFX I/O, serialization, strings, FFT/memory/PDC references and Cockos ReaVerb
+guide reviewed before implementation. Uniform partitioned overlap-add, linked
+peak scaling, FIR resampling-area correction and the test FFT/SRC are original
+implementations of established mathematics. No third-party convolution engine,
+WAV asset, IR, recording, GPL/LGPL code, or proprietary ReaVerb implementation
+is copied. Exact undocumented ReaVerb processing is not claimed.
