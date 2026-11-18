@@ -18,6 +18,28 @@
 - REAPER parsing, actual 2x/4x host behavior, listening and CPU validation remain
   pending. No listening or amp-equivalence claim is made; PR stays unmerged.
 
+## v0.2 — extended filtering and optional drive (2026-11-17)
+
+- Added separate `Bostone_Preamp_v0.2.jsfx` / `Bostone Preamp v0.2` identity;
+  kept v0.1 file byte-for-byte unchanged for side-by-side installation.
+- Retained original slider indices/defaults; extended v0.2 High Cut minimum
+  and DSP clamp to 400 Hz. Documented actual v0.1 response, cutoff/slopes,
+  reference-setting responses, and below/near-bell stability tests.
+- Added optional constant-peak band-pass pre-EQ with center, Q, and independent
+  level. Original HP+bell+LP remains default; band-pass is an alternative path.
+- Added optional cascaded soft clipping, interstage low-pass, partially
+  compensated stage gain and trim. Legacy tanh remains default and is
+  sample-identical in the independent numerical reference under old settings.
+- Added response, legacy equivalence, stereo/isolation, finite automation,
+  mode/control ramp, low-cutoff impulse, band-pass bandwidth/level, and
+  drive harmonic comparison tests. Static compatibility lint covers both files.
+- Updated exact install/update steps, matched-loudness v0.1/v0.2 and Flextron
+  A/B protocol, sustained-note decay checks, and provenance documentation.
+- Deferred compressor/sustainer to a separate PR after filter/drive validation;
+  no oversampling, cabinet assets, external plugin dependency, or VST3 work.
+- REAPER runtime compilation/listening/CPU checks remain pending. Offline
+  checks are not host validation; no audible amp-equivalence claim is made.
+
 ## v0.1 — JSFX syntax corrections (2026-11-17)
 
 - Replaced every scientific-notation guard literal in the production JSFX with

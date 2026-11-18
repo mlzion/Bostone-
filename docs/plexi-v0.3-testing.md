@@ -135,3 +135,12 @@ acceptance criteria remain pending; keep the PR unmerged for review and testing.
 - The independent AC solver and time-domain tone network agreed at the tested
   warped-frequency point; all tested tone pot corners remained finite.
 - REAPER runtime and listening results: **not performed / pending**.
+
+### Integration with merged v0.2 (2026-11-18)
+
+After merging the latest main into the Plexi branch, the combined v0.1/v0.2/Plexi
+suite passed **32 tests** (14 baseline/compatibility, nine v0.2, nine Plexi).
+The three production JSFX files are unchanged from their respective reviewed
+versions. Changelog/source-register conflicts retain both versions' entries;
+the README merged automatically. No REAPER runtime results are implied by this
+integration run. PR #4 remains open for review and host testing.

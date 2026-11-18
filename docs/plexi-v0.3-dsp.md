@@ -1,9 +1,10 @@
 # Bostone Plexi v0.3 DSP architecture
 
 An original circuit-inspired experiment, not a component-accurate Marshall model.
-There is no cabinet, convolution, stereo crossfeed or effect bus. v0.1 and the
-separate v0.2 development branch are not modified. This PR branches from main;
-v0.2 does not need to be merged or installed for Plexi to work.
+There is no cabinet, convolution, stereo crossfeed or effect bus. v0.1 and
+v0.2 are preserved unchanged. This branch includes the latest main with v0.2
+merged; Plexi remains independently installable and does not require either
+preamp to be loaded.
 
 ## Processing order
 

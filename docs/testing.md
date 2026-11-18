@@ -93,3 +93,103 @@ See [changelog](../CHANGELOG.md) for the exact scope of corrections.
 
 After these corrections, all 14 tests passed on 2026-11-17 (the original nine
 numerical/source-contract cases plus five compatibility regression cases).
+
+## v0.2 acceptance and A/B plan
+
+### Automated scope
+
+Run the same unittest discovery command above. It now also covers the v0.2
+numerical model and actual-source compatibility lint. Tests verify:
+
+- Frozen v0.1 blob identity, separate v0.2 description, all original indices and
+  defaults, exact High Cut slider/clamp minimum, and new control defaults.
+- Sample-identical legacy model output at 44.1/48/96 kHz for defaults, the issue's
+  reference settings, unused new-control changes, original automation/bypasses.
+- Isolated -3.0103 dB HP/LP cutoffs and slopes in warped frequency; combined
+  reference response; LP 400 Hz impulse decay with bell frequencies 150–1000 Hz.
+- Band-pass unity center gain, -3 dB bandwidth, poles, DC/Nyquist rejection,
+  independent center-level scaling, and independence from unused HP/bell/LP.
+- New paths' silence, stereo isolation, finite output and automation extremes
+  at seven sample rates; low-level new-control/selector transition bounds.
+- Selected bypass output after ramp settling and a level-independent
+  third/fundamental increase in cascaded drive while retaining a fundamental.
+
+The numerical model does not execute the production source. Exact legacy
+comparison refers to model output, not a measured REAPER null. Source lint is
+not a full EEL2 compiler. Audible note definition, pumping/noise, aliases,
+instance recall, sample-rate switching, and CPU remain manual checks.
+
+### Side-by-side installation and update
+
+1. Open REAPER's resource path using Options. In its `Effects/Bostone` directory,
+   leave `Bostone_Preamp.jsfx` untouched and copy `Bostone_Preamp_v0.2.jsfx` beside
+   it. Typical nonportable Windows location:
+   `%APPDATA%\REAPER\Effects\Bostone\Bostone_Preamp_v0.2.jsfx`.
+2. Use FX browser **FX → Scan for new plugins**. Confirm two distinct entries:
+   **JS: Bostone v0.1 - Preamp Prototype** and **JS: Bostone Preamp v0.2**.
+   Check that neither file has a hidden `.txt` suffix or a duplicate elsewhere.
+3. In a temporary project insert both on one track. Open each JSFX editor and
+   confirm compilation; v0.1 has 17 controls, v0.2 has 25. Keep only one FX
+   enabled via REAPER's instance bypass checkbox. Both active would stack them.
+   Set different outputs on each; toggle to confirm independent instance state.
+4. For v0.2 updates replace only its versioned file and refresh the browser.
+   Save instance settings first and remove/reinsert v0.2 in the temporary test
+   project to ensure the disk revision is loaded. Existing v0.1 projects and
+   preset references must still open normally. Save/reopen and test recall.
+
+### Legacy null and filter exploration
+
+5. Set v0.2 selectors 18 and 22 to Legacy. Match all original 17 values manually
+   with v0.1. On duplicate tracks play the same DI, phase-invert one, and allow
+   filter tails/smoothing to settle. Confirm a null with both instances enabled
+   on separate tracks. Restore normal routing before listening comparisons.
+6. Start with the issue's reference: input 0 dB, HP 218 Hz, bell +6.4 dB / 685 Hz,
+   LP 2000 Hz, Drive 20, post low -8.2 dB, mid +5.1 dB / 717 Hz, high -12 dB,
+   output -2.6 dB. All sections enabled. Do not change the v0.1 track further.
+   On v0.2 sweep LP from 2000 down to 400 Hz; listen below/near the bell center.
+7. Compare v0.2 Legacy pre-EQ against Band-pass at 685 Hz, Q 1, Level 0 dB.
+   Sweep Q 0.25–4 and Level ±12 dB; verify narrower bandwidth does not itself
+   boost the center. Original HP/bell/LP controls should have no effect while
+   Band-pass is fully selected, and their saved values should return on Legacy.
+
+### Bostone alone vs Bostone + Flextron at matched loudness
+
+8. Use your own identical DI source on two aligned tracks: A = Bostone v0.2
+   alone; B = identical Bostone settings followed by the user's Flextron Marshall
+   simulation. Obtain/use Flextron separately; it is not bundled or required.
+   Disable unrelated FX. Avoid active master dynamics altering the comparison.
+9. First compare Legacy drive on A/B; then switch both to Cascaded. Start Stage
+   Gain 12 dB, Interstage Cut 6000 Hz, Trim 0 dB. Adjust stage gain/cut/trim,
+   auditioning both with and without Flextron. Bypass only one comparison track
+   at a time to avoid comb filtering. Document Flextron settings/version.
+10. For every A/B use post-chain track trim to match integrated loudness over
+    the same passage, then fine-tune by ear at a conservative monitoring level.
+    Do not equate peak matching with perceived loudness. Record trims and meter
+    readings; added compensation is a starting point, not automatic matching.
+    Compare attack, pitch clarity, chords, high-string fizz and low-string
+    definition. Require a listening verdict before saying tone/definition improved.
+11. Play/record a sustained lead note (at least 5–10 seconds) identically through
+    each path, including near-silent tail and between-note noise. Compare time
+    to fall 20/40 dB below initial level, tail roughness, noise floor and apparent
+    sustain at matched onset loudness. Existing distortion can change decay;
+    there is no new compressor, gate, attack/release control or sustain promise.
+    Record desired sustain/noise behavior for a later dynamics PR.
+12. Test all enables, Master Bypass, both selectors and rapid automation, including
+    mode reversal mid-crossfade. Confirm no disruptive bursts/clicks. Repeat the
+    above at 44.1/48/96 kHz, then other device rates and block sizes. Check left
+    and right isolation, sample-rate changes, render/live consistency and CPU.
+    High-drive aliasing is expected; report it rather than claiming elimination.
+
+### Runtime result status
+
+No REAPER executable is available in this development workspace. v0.2 compilation,
+side-by-side host insertion, listening, CPU, and perceived-loudness/lead-decay
+checks are **pending**, not passed. v0.1 was reported working by the user and
+merged before this issue; that does not validate v0.2. Do not merge this PR until
+host tests are recorded. Compressor/sustainer scope is deferred to a separate PR
+as permitted by Issue #2, after filter/drive behavior is validated.
+
+Development run on 2026-11-17: **23 automated test cases passed** (the prior 14
+plus nine v0.2 cases); compatibility checks inspect both JSFX files. Diff
+whitespace checks passed. The v0.1 blob SHA matches merged main:
+`442fee3dc5c81beb6f7269381dbf5b840d948d32`.
