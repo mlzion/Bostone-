@@ -30,10 +30,12 @@ behavior, actual persistence and load-state race behavior remain host tests.
 Existing amp tests are retained; a source contract confirms its definitions,
 original controls and processing section are unmodified in the new file.
 
-## Mandatory REAPER checks — pending
+## Remaining Windows / real-time checks
 
-Runtime compilation and audible tests are deliberately separate. No REAPER
-executable is installed here; no host or listening test below has been performed.
+The initial revision had no host validation. The continuous-audio correction
+has since been compiled/rendered in REAPER 7.47 Linux; see the native results
+below. Windows live-monitoring, audio-device deadlines/xruns, GUI reloads and
+listening remain pending. The following checklist still applies to those tests.
 
 1. Install using [the usage instructions](plexi-v0.4-cabinet.md). Confirm the
    distinct FX identity, all ten original amp sliders/defaults and appended
@@ -79,7 +81,7 @@ executable is installed here; no host or listening test below has been performed
 The PR stays unmerged until review. Long reverb IRs, arbitrary-folder browsing
 and more demanding hot-swap requirements are better served by v0.3 + ReaVerb.
 
-## Recorded development results — 2026-11-18
+## Recorded initial-development results — 2026-11-18
 
 - Complete suite: **41 tests passed** (32 retained baseline/amp/preamp cases plus
   nine cabinet cases), using `python3 -m unittest discover -s tests -v`.
@@ -88,3 +90,64 @@ and more demanding hot-swap requirements are better served by v0.3 + ReaVerb.
   FFT, decoder, requested-rate SRC, selector/persistence and reload lifecycle
   remain explicitly unverified in REAPER.
 - No WAV assets are committed; tests generate temporary PCM fixtures.
+
+
+## Continuous-audio correction — 2026-11-18
+
+The original model-only checks did not detect the real-time workload problem:
+full-length interpreted partition convolution continued even with Cabinet off.
+A maximum-length stereo IR took about 4.23 s to batch-render 3 s of audio here.
+The old source rendered continuous samples offline; the Windows live blips
+were not independently reproduced, and no arithmetic one-second gate or memory
+overlap was identified. The fix targets demonstrated deadline risk and validates
+actual source execution instead of claiming a speculative pointer error.
+
+The new nonuniform head/tail OLA and native complex multiply preserve 64-sample
+latency and all controls, reduce the convolution workload, suspend FFT in settled
+bypass, and clear/re-prime before re-enable without touching the dry ring.
+
+### Automated regression results
+
+- Full standard-library suite: **44 tests passed** (41 retained plus three
+  continuous-stream/boundary/work-gate regressions).
+- A 100800-frame nonzero stereo stream matches sparse direct FIR at every
+  sample, including 63/64, 255/256 and later partition boundaries. No periodic
+  silent windows; actual source memory-region disjointness/page bounds checked.
+- Original v0.3 amp code and all 19 v0.4 slider definitions/defaults are unchanged.
+- `git diff --cached --check` passed.
+
+### Actual REAPER integration runner
+
+Provide your own installed REAPER executable (not bundled/downloaded by tests):
+
+```console
+python3 tests/run_reaper_cabinet.py --reaper /path/to/reaper --report /tmp/reaper-cabinet-results.json
+```
+
+Example Windows executable argument: `--reaper "C:\Program Files\REAPER (x64)\reaper.exe"`.
+The runner uses a temporary isolated resource directory, PCM fixtures and REAPER
+batch conversion. Test-only output channels count loads/FFT calls and monitor
+memory canaries. The product's original two-channel processing is unchanged by
+those probes. Known project-state serialization is injected to exercise saved
+valid/missing filenames. No copyrighted IR, EEL implementation or binary is
+committed. Native runs are optional and separate from unittest discovery.
+
+**10 native REAPER 7.47/linux-x86_64 cases passed** (five cases at each of
+44.1/48 kHz), using 3-second streams and a 32768-frame stereo sparse IR:
+
+1. Cabinet bypass / amp bypass: PDC-aligned output exactly matches input.
+2. Cabinet bypass / amp active: output exactly matches a v0.3 render.
+3. Cabinet enabled: stereo convolution matches direct FIR; max error
+   0.00000005960464477539063 (half one 24-bit sample LSB).
+4. Missing saved IR: continuous, exact aligned amp-bypass input fallback.
+5. Disable/re-enable during the stream: exact steady bypass and restored FIR,
+   continuous audio through transitions, FFT counter flat in settled bypass.
+
+Every run loaded exactly once; all buffer guards stayed intact. Full results,
+including wall times, are in [the native results JSON](plexi-v0.4-native-results.json).
+Near-capacity enabled render times improved to about 1.25–1.36 s per 3 s of audio,
+and bypass about 0.62 s on this machine, including startup/I/O. This is not a
+universal CPU guarantee. Actual Windows device-buffer scheduling and the user's
+reported live failure still need a confirmation retest. GUI/reload interactions,
+ReaVerb matching, listening and actual device underruns are not validated by an
+offline render. PR #6 remains open and must not be merged automatically.

@@ -62,25 +62,40 @@ disable mono mixing, pan/width alterations, offsets and extra modules; verify
 routing with L-only and R-only impulses. Four-channel true-stereo files are
 unsupported rather than remixed. Raw-mode fidelity is prioritized over UI mimicry.
 
-## Uniform partitioned overlap-add
+## Nonuniform partitioned overlap-add (continuous-audio correction)
 
-Block B=64, complex FFT N=128. Each FIR partition contains 64 coefficients plus
-64 zeros. Each input block is zero padded likewise. In frequency order:
+The original uniform engine's interpreted complex multiply loop ran even in
+cabinet bypass and exceeded the three-second audio duration in a near-capacity
+native render on the development machine. No fixed one-second gating operation
+or overlapping memory region was found. Offline old-code rendering stayed
+continuous; the Windows live failure is not claimed reproduced. A measured
+real-time-budget problem was addressed rather than assuming an indexing defect.
 
-Y_j = sum over p of X_(j-p) * H_p.
+The replacement uses B=64/N=128 for the first 256 FIR taps, then B=256/N=512
+for the remaining taps beginning at IR offset 256. Each bank uses zero-padded
+partitioned OLA: Y_j=sum(X_(j-p)*H_p). Native convolve_c performs complex products;
+a small unrolled addition loop accumulates them. Inverse results are divided by
+the actual FFT length N; the second half is saved as overlap. No STFT window.
 
-After inverse permutation/IFFT, divide by 128; output first half plus last
-block's saved overlap, and retain the second half for the next block. No STFT
-window is applied. The current block is computed after its last input sample;
-its first output appears the next sample, giving exactly 64 samples of engine
-latency. Original IR leading silence and timing are additional and untouched.
+The head output retains 64 samples of algorithmic delay. The tail engine has
+256 samples of algorithmic delay plus a separate 64-sample output delay:
+256+64 = original IR offset 256 + global latency 64. Thus taps on both sides of
+255/256 and every later boundary retain their exact time/gain. There is no gap,
+double-counted boundary or arbitrary tail shift. Native delta/multitap and
+continuous-stream comparisons validate this schedule.
 
-Each channel has its own FFT history, accumulator, overlap and dry delay. Mono
-coefficients are duplicated, not audio channels. Dry output is delayed by the
-same 64 samples. pdc_delay=64, pdc_bot_ch=0, pdc_top_ch=2 remains constant in all
-cabinet modes, including missing IR and cabinet bypass; no PDC jumps on switches.
-This is about 1.45 ms at 44.1 kHz or 1.33 ms at 48 kHz, excluding interface and
-host oversampling latency. No zero-latency convolution claim is made.
+Both channels have separate spectra, overlap and audio histories. Shared FFT
+workspaces are used sequentially; the right channel cannot overwrite the left
+output. The independent dry ring always advances once per sample, outside all
+FFT, bypass and file-loading branches. Its memory is never cleared on IR swap
+or cabinet re-enable. Global latency/PDC stays 64 in every cabinet mode,
+including bypass/no IR: about 1.45 ms at 44.1 kHz or 1.33 ms at 48 kHz.
+
+After the existing 10 ms bypass fade completes, cabinet FFT work is suspended.
+Re-enable resets/re-primes only convolution/filter histories while the dry ring
+continues. The unchanged dry path carries audio until the head is primed and
+then the existing fade engages the cabinet. Old bypass-era tails are discarded,
+not replayed. This deliberately replaces the former expensive warm-FFT policy.
 
 ## Resampling and gain
 
@@ -100,19 +115,31 @@ parity remains a host measurement requirement.
 
 ## Memory and CPU
 
-All amp memory remains at its original offsets; cabinet buffers begin at 1024.
-FFT work slots use 256 items. IR L/R banks start at 65536/196608, input spectral
-rings at 327680/458752, and raw interleaved data at 655360. Each bank has 512
-partitions. FFT offsets are multiples of 256 and never cross a 65536-item page.
-The highest raw-data endpoint is 720896 slots, about 5.5 MiB at eight bytes per
-slot, within JSFX's default local address space. No globals are shared between
-instances and no per-sample buffer allocation is performed.
+Amp memory remains [0..88]. The dry L/R rings remain [1920..2047]. The head's
+256-slot FFT/work buffers start at 1024/1280, followed by its disjoint 64-frame
+input/output/overlap buffers. Tail FFT/work buffers start at 4096/5120 (1024
+slots each), tail audio buffers at 6144..7679, and alignment rings at 7680..7807.
 
-At 48 kHz a 20 ms IR needs 15 partitions; a 200 ms IR needs 150. Work scales
-linearly with partitions and processing rate. Two channels need four 128-point
-transforms per input block, plus complex multiply/accumulate work. Long IRs and
-whole-instance oversampling can be costly; no measured REAPER CPU percentage
-is claimed. Memory is bounded and oversize requests fail rather than truncate.
+Head H L/R and X L/R banks start at 65536/66560/67584/68608, reserving four
+256-slot partitions each. Tail H L/R and X L/R banks start at
+131072/262144/393216/524288, reserving 128 partitions of 1024 slots each. The
+maximum tail uses 127 partitions. Raw data remains at 655360..720895. All FFT
+slots fit wholly within a 65536-item page; regions never overlap. Highest raw
+endpoint remains 720896, about 5.5 MiB at eight bytes per slot. Reset clears
+convolution/filter buffers, never amp matrix or the continuous dry delay.
+
+Source-derived interval tests validate the actual constants, and native-host
+test-only canaries at critical region boundaries remain unchanged. The tests
+also check that each run loads its IR once, and FFT call counters stop throughout
+settled cabinet bypass. These diagnostics are not production features.
+
+The tail's per-second partition work drops by roughly fourfold, and complex
+products run in REAPER's native primitive instead of interpreted arithmetic.
+Render wall times for three seconds of 48 kHz stereo with a 32768-frame IR were
+about 4.23 s before, versus 1.25–1.36 s enabled / 0.62 s bypassed after correction
+on this environment (including startup/I/O). These are not portable CPU-percent
+or hard real-time guarantees. Small device buffers, long IRs and oversampling
+still need Windows real-time CPU/xrun tests. No data asset/REAPER binary is bundled.
 
 ## Loading, persistence and state transitions
 
@@ -135,5 +162,5 @@ bypass/filter mixes use its 10 ms ramp. Reload is fade-to-bypass and fade-back,
 not simultaneous old/new IR convolution. It cannot guarantee no audio underrun
 from disk reads. Mute monitoring for changes. FFT/non-finite/extreme-output
 faults disengage the cabinet; the amp itself remains unchanged. No output limiter
-is appended because that would change IR gain/tone. Runtime lifecycle, UI/file
-persistence, reload clicks and CPU must be validated separately in REAPER.
+is appended because that would change IR gain/tone. Linux 7.47 batch validation is recorded in the testing notes. Windows live
+monitoring, GUI reload clicks and device-buffer/xrun behavior still need retesting.

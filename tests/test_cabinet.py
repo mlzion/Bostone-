@@ -23,12 +23,22 @@ class CabinetTests(unittest.TestCase):
             self.assertIn(original,new)
         self.assertEqual(re.findall(r'^slider(?:[1-9]|10):.*$',old,re.M),re.findall(r'^slider(?:[1-9]|10):.*$',new,re.M))
         b=old.encode(); self.assertEqual(hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest(),'66d21f8843d78335bc3e178b50ff76cfcc2b2c6f')
-        for literal in ('@serialize','file_string(0,#cab_file)','@block','pdc_delay=64','fft_permute','fft_ipermute','/128',"ch='rqsr'",'want>32768','cab_fade_request=cab_reload && play_state===0','file_avail(0)>=0','slider19:/BostoneIR:None'):
+        for literal in ('@serialize','file_string(0,#cab_file)','@block','pdc_delay=64','fft_permute','fft_ipermute','/n',"ch='rqsr'",'want>32768','cab_fade_request=cab_reload && play_state===0','file_avail(0)>=0','slider19:/BostoneIR:None'):
             self.assertIn(literal,new)
-        # Every transform is 128 complex pairs; bases/stride are 256 aligned.
-        for base in (65536,196608,327680,458752):
-            for p in range(512):self.assertEqual((base+p*256)//65536,(base+p*256+255)//65536)
-        self.assertLess(655360+65536,8388608)
+        # Validate actual memory constants, not a duplicated assumed layout.
+        ptr={k:int(v) for k,v in re.findall(r'\b(cab_\w+)=(\d+);',new)}
+        regions={'cab_fft':256,'cab_sum':256,'cab_ol':64,'cab_or':64,'cab_il':64,'cab_ir':64,
+                 'cab_ovl':64,'cab_ovr':64,'cab_dl':64,'cab_dr':64,'cab_tfft':1024,'cab_tsum':1024,
+                 'cab_til':256,'cab_tir':256,'cab_tol':256,'cab_tor':256,'cab_tovl':256,'cab_tovr':256,
+                 'cab_tdl':64,'cab_tdr':64,'cab_hl':1024,'cab_hr':1024,'cab_xl':1024,'cab_xr':1024,
+                 'cab_th_l':131072,'cab_th_r':131072,'cab_tx_l':131072,'cab_tx_r':131072,'cab_raw':65536}
+        spans=sorted((ptr[k],ptr[k]+length,k) for k,length in regions.items())
+        self.assertGreaterEqual(spans[0][0],89)
+        for a,b in zip(spans,spans[1:]):self.assertLessEqual(a[1],b[0],(a,b))
+        self.assertLess(spans[-1][1],8388608)
+        for key,parts,slots in [('cab_hl',4,256),('cab_hr',4,256),('cab_xl',4,256),('cab_xr',4,256),
+                                ('cab_th_l',128,1024),('cab_th_r',128,1024),('cab_tx_l',128,1024),('cab_tx_r',128,1024)]:
+            for p in range(parts):self.assertEqual((ptr[key]+p*slots)//65536,(ptr[key]+p*slots+slots-1)//65536)
         self.assertNotIn('cab_restored=0',new.split('@init',1)[1].split('@slider',1)[0])
 
     def test_impulse_timing_gain_and_partition_boundaries(self):

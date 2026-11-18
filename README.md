@@ -163,5 +163,7 @@ demanding browsing/hot-swap workflows, use v0.3 plus ReaVerb.
 - [Engine design, memory/latency and researched ReaVerb mapping](docs/plexi-v0.4-technical.md)
 - [Automated checks and REAPER comparison checklist](docs/plexi-v0.4-testing.md)
 
-REAPER runtime compilation, actual file/SRC/project persistence, audible parity
-with ReaVerb and CPU measurements remain pending. No automatic merge is performed.
+The continuous-audio correction passes native REAPER 7.47 Linux batch tests
+with buffer guards, exact aligned bypass and sparse-FIR comparisons. Windows
+real-time monitoring, UI persistence, audible ReaVerb parity and device CPU/xruns
+still require validation. No automatic merge is performed.

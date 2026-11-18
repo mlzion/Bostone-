@@ -57,8 +57,8 @@ Dry means the amp's output before cabinet convolution, not the guitar DI.
 process that signal. Cabinet Enable is its separate bypass. For an amp-only
 comparison disable Cabinet, leaving Amp Enable as desired. Fully settled cabinet
 bypass ignores IR level, filters, normalization and wet/dry settings: it returns
-the original amp output at unity, delayed by exactly 64 samples. Native REAPER FX
-bypass/PDC interaction needs host testing.
+the original amp output at unity, delayed by exactly 64 samples. Linux batch PDC/bypass behavior is tested; Windows real-time host bypass still
+needs verification.
 
 Normal Raw introduces no peak normalization, silence trimming, onset alignment,
 phase conversion, automatic output compensation or safety limiter. Leading

@@ -82,12 +82,13 @@ def read_wav(path):
 
 
 class Partitioned:
-    def __init__(self,channels):
-        self.parts=math.ceil(len(channels[0])/B)
-        self.h=[[fft(c[p*B:(p+1)*B]+[0.]*(2*B-len(c[p*B:(p+1)*B]))) for p in range(self.parts)] for c in channels]
-        self.hist=[[[0j]*(2*B) for _ in range(self.parts)] for _ in range(2)]
-        self.input=[[0.]*B for _ in range(2)]; self.output=[[0.]*B for _ in range(2)]; self.overlap=[[0.]*B for _ in range(2)]
-        self.head=0; self.pos=0; self.delay=[[0.]*B for _ in range(2)]
+    def __init__(self,channels,block=B):
+        self.b=block
+        self.parts=math.ceil(len(channels[0])/self.b)
+        self.h=[[fft(c[p*self.b:(p+1)*self.b]+[0.]*(2*self.b-len(c[p*self.b:(p+1)*self.b]))) for p in range(self.parts)] for c in channels]
+        self.hist=[[[0j]*(2*self.b) for _ in range(self.parts)] for _ in range(2)]
+        self.input=[[0.]*self.b for _ in range(2)]; self.output=[[0.]*self.b for _ in range(2)]; self.overlap=[[0.]*self.b for _ in range(2)]
+        self.head=0; self.pos=0; self.delay=[[0.]*self.b for _ in range(2)]
 
     def tick(self,l,r,enable=True,wet=1,dry=0,level=1):
         idx=self.pos; result=[]
@@ -97,17 +98,17 @@ class Partitioned:
             result.append((dry*aligned+wet*level*y) if enable else aligned)
             self.input[ch][idx]=x
         self.pos+=1
-        if self.pos==B:
+        if self.pos==self.b:
             self.pos=0
             for ch in range(2):
-                self.hist[ch][self.head]=fft(self.input[ch]+[0.]*B)
-                total=[0j]*(2*B)
+                self.hist[ch][self.head]=fft(self.input[ch]+[0.]*self.b)
+                total=[0j]*(2*self.b)
                 for p in range(self.parts):
                     x=self.hist[ch][(self.head-p)%self.parts]; h=self.h[ch][p]
                     total=[a+b*c for a,b,c in zip(total,x,h)]
                 out=fft(total,True)
-                self.output[ch]=[out[i].real+self.overlap[ch][i] for i in range(B)]
-                self.overlap[ch]=[out[i+B].real for i in range(B)]
+                self.output[ch]=[out[i].real+self.overlap[ch][i] for i in range(self.b)]
+                self.overlap[ch]=[out[i+self.b].real for i in range(self.b)]
             self.head=(self.head+1)%self.parts
         return tuple(result)
 
@@ -141,4 +142,21 @@ class PostMix:
             s[0]+=g['hp']*(w-s[0]); w-=g['hpm']*s[0]
             s[1]+=g['lp']*(w-s[1]); w+=g['lpm']*(s[1]-w)
             out.append(g['dry']*d+g['wet']*g['level']*w)
+        return tuple(out)
+
+
+class Hybrid:
+    """64-frame first 256 taps; 256-frame remainder plus 64-frame alignment."""
+    def __init__(self,channels):
+        self.head=Partitioned([c[:256] for c in channels])
+        self.tail=Partitioned([c[256:] for c in channels],256) if len(channels[0])>256 else None
+        self.delay=[[0.]*64 for _ in range(2)]; self.pos=0
+
+    def tick(self,l,r):
+        head=self.head.tick(l,r)
+        if self.tail is None:return head
+        tail=self.tail.tick(l,r); out=[]
+        for ch in range(2):
+            out.append(head[ch]+self.delay[ch][self.pos]); self.delay[ch][self.pos]=tail[ch]
+        self.pos=(self.pos+1)%64
         return tuple(out)

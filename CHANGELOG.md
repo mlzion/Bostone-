@@ -1,5 +1,24 @@
 # Changelog
 
+## Plexi v0.4 — continuous audio / real-time workload correction (2026-11-18)
+
+- Replaced full-length interpreted 64-frame partition convolution with a
+  nonuniform 64-frame head / 256-frame tail and native complex multiplication.
+  Preserved 64-sample global latency, IR timing/gain and all cabinet controls.
+- Suspended FFT work after Cabinet bypass settles. Re-enable clears/re-primes
+  cabinet histories before fading in; the independent dry delay always advances.
+- Added source-derived disjoint memory/page checks, multi-second stream/direct
+  FIR regressions, boundary impulses and a native REAPER batch runner with
+  load/FFT counters and memory canaries. v0.3 amplifier DSP is unchanged.
+- 44 unit tests and 10 REAPER 7.47 Linux render cases pass. Native amp bypass
+  matches v0.3 exactly; FIR output matches within a 24-bit half-LSB. No repeated
+  loading or buffer-canary corruption occurred in those runs.
+- Found a demonstrated real-time budget risk, not a proven indexing defect:
+  near-capacity old rendering exceeded audio duration, while new rendering is
+  substantially faster. Windows live blips were not reproduced in offline Linux;
+  real-time Windows, device CPU/xruns and listening confirmation remain pending.
+
+
 ## Bostone Plexi v0.4 — integrated cabinet IR (2026-11-18)
 
 - Added separate `Bostone_Plexi_v0.4.jsfx`, preserving the v0.3 amp's original
