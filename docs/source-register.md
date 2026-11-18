@@ -31,3 +31,13 @@ project combinations of established techniques. No implementation code or audio
 assets were imported. Flextron is an external comparison effect only: it is not
 bundled, called, reverse engineered, or required by Bostone. The offline model
 uses only Python's standard library. v0.1 production source remains unchanged.
+
+## Plexi v0.3
+
+See [Plexi research register](plexi-v0.3-references.md) for the required Marshall
+schematic, both supplied circuit analyses, official EEL2 docs, selected values,
+source-access limitations and explicit substitutions. Unlike the initial v0.1
+register, these references were retrieved and reviewed during development.
+The passive nodal/companion solver, biased preamp, differential power curves and
+independent numerical/AC tests are original implementations of mathematical
+techniques. No code, models, images, IRs or recordings are copied from the sites.

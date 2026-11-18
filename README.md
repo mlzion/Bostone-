@@ -110,3 +110,32 @@ source. See [syntax corrections and runtime status](CHANGELOG.md).
 
 See [signal chain](docs/signal-chain.md), [DSP notes](docs/dsp-notes.md),
 [source register](docs/source-register.md), and [test procedure](docs/testing.md).
+
+## Bostone Plexi v0.3 — standalone amplifier prototype
+
+Plexi is a separately installable experiment inspired by a cranked Marshall
+1959 Super Lead, not a claim of exact circuit or EL34 emulation. The existing
+v0.1 and v0.2 files remain unchanged; all three FX can be installed together.
+
+Copy [Bostone_Plexi_v0.3.jsfx](jsfx/Bostone_Plexi_v0.3.jsfx) alongside the other
+JSFX in the REAPER resource-path `Effects/Bostone` folder. Refresh the FX browser
+with **FX → Scan for new plugins** and select **JS: Bostone Plexi v0.3**. Do not
+rename or overwrite the older files. No runtime dependencies or cabinet IRs
+are included.
+
+Input conditioning → bright asymmetric preamp → adjustable interstage bass
+filter → second preamp → interactive passive RC tone stack → phase inverter
+→ push-pull power-stage approximation → Presence/output filtering → level.
+Start with clean DI and defaults (Preamp 6 dB, Power 3 dB, Output -12 dB), at a
+low monitor volume. When driven by v0.2, begin with Input -12 dB / Output -18 dB.
+
+- [Installation, all ten controls, 2x/4x host oversampling and A/B checklist](docs/plexi-v0.3-testing.md)
+- [DSP architecture, tone-stack netlist, dynamics and limitations](docs/plexi-v0.3-dsp.md)
+- [Reviewed sources, verified selected values and explicit substitutions](docs/plexi-v0.3-references.md)
+
+Intended chain: **Bostone v0.2 → Plexi → ReaVerb (your Marshall 1960 IR)**.
+Compare with **v0.2 → Flextron (cab disabled) → ReaVerb (same IR)** at matched
+perceived loudness. No custom oversampling, reverb, widening or cabinet model
+is in Plexi. REAPER compilation/listening/CPU/actual host oversampling tests
+remain pending; automated numerical checks do not establish host compatibility.
+Do not merge the Plexi PR automatically.

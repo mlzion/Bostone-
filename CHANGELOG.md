@@ -1,5 +1,23 @@
 # Changelog
 
+## Bostone Plexi v0.3 — standalone amp prototype (2026-11-17)
+
+- Added separately installable `Bostone_Plexi_v0.3.jsfx`, displayed as
+  `Bostone Plexi v0.3`; existing Bostone source and version branches are untouched.
+- Added bright/coupling frequency shaping, two different biased preamp curves,
+  interactive passive RC Bass/Middle/Treble, unequal PI soft saturation, a
+  differential bounded-current power stage, and modest per-channel rail memory.
+- Added pre-distortion Bass Tightness, Presence HF-feedback surrogate, DC
+  removal, bounded wet output, smooth controls/bypass and warm bypass histories.
+- Uses actual processing srate throughout; relies on REAPER FX oversampling,
+  with no custom resampler, cabinet, IR assets, widening or time effects.
+- Reviewed requested references before implementation; recorded selected circuit
+  values, variants and explicit behavioral substitutions without exact-model claims.
+- Added original numerical/AC tests and installation, settings, research,
+  oversampling and matched-loudness Flextron/ReaVerb comparison documentation.
+- REAPER parsing, actual 2x/4x host behavior, listening and CPU validation remain
+  pending. No listening or amp-equivalence claim is made; PR stays unmerged.
+
 ## v0.2 — extended filtering and optional drive (2026-11-17)
 
 - Added separate `Bostone_Preamp_v0.2.jsfx` / `Bostone Preamp v0.2` identity;
