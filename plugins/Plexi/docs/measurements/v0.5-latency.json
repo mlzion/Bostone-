@@ -1,0 +1,83 @@
+[
+  {
+    "rate": 44100,
+    "mode": 0,
+    "version": "7.47/linux-x86_64",
+    "max_error": 0.0,
+    "compensated_peak_frame": 11025,
+    "expected_peak_frame": 11025,
+    "passed": true
+  },
+  {
+    "rate": 44100,
+    "mode": 1,
+    "version": "7.47/linux-x86_64",
+    "max_error": 5.841881269392692e-08,
+    "compensated_peak_frame": 11025,
+    "expected_peak_frame": 11025,
+    "passed": true
+  },
+  {
+    "rate": 44100,
+    "mode": 2,
+    "version": "7.47/linux-x86_64",
+    "max_error": 5.722575864043622e-08,
+    "compensated_peak_frame": 11025,
+    "expected_peak_frame": 11025,
+    "passed": true
+  },
+  {
+    "rate": 48000,
+    "mode": 0,
+    "version": "7.47/linux-x86_64",
+    "max_error": 0.0,
+    "compensated_peak_frame": 12000,
+    "expected_peak_frame": 12000,
+    "passed": true
+  },
+  {
+    "rate": 48000,
+    "mode": 1,
+    "version": "7.47/linux-x86_64",
+    "max_error": 5.841881269392692e-08,
+    "compensated_peak_frame": 12000,
+    "expected_peak_frame": 12000,
+    "passed": true
+  },
+  {
+    "rate": 48000,
+    "mode": 2,
+    "version": "7.47/linux-x86_64",
+    "max_error": 5.722575864043622e-08,
+    "compensated_peak_frame": 12000,
+    "expected_peak_frame": 12000,
+    "passed": true
+  },
+  {
+    "rate": 96000,
+    "mode": 0,
+    "version": "7.47/linux-x86_64",
+    "max_error": 0.0,
+    "compensated_peak_frame": 24000,
+    "expected_peak_frame": 24000,
+    "passed": true
+  },
+  {
+    "rate": 96000,
+    "mode": 1,
+    "version": "7.47/linux-x86_64",
+    "max_error": 5.841881269392692e-08,
+    "compensated_peak_frame": 24000,
+    "expected_peak_frame": 24000,
+    "passed": true
+  },
+  {
+    "rate": 96000,
+    "mode": 2,
+    "version": "7.47/linux-x86_64",
+    "max_error": 5.722575864043622e-08,
+    "compensated_peak_frame": 24000,
+    "expected_peak_frame": 24000,
+    "passed": true
+  }
+]
