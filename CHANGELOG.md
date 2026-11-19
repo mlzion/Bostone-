@@ -1,5 +1,21 @@
 # Changelog
 
+## Plexi v0.4 — remaining cabinet dropout correction (2026-11-19)
+
+- Replace bursty nonuniform convolution with bounded 64-frame/128-point real FFT
+  partitions and native spectral products; correctly handle packed endpoints,
+  final complex pair and host-calibrated 512 inverse convolution scale.
+- Reduce capacity to 4096 processed IR frames. Explicit 80 ms crop fits native
+  44.1/48 kHz; longer files reject visibly or use external ReaVerb.
+- Avoid redundant same-filename serialization reload requests; retain explicit
+  reload and changed-file handling. Preserve amp DSP, all controls and dry ring.
+- 45 automated tests and 16 actual REAPER 7.47 Linux 30-second cases pass,
+  including continuity, memory guards, single loads and simulated same-file
+  restore notifications. Windows live deadlines and exact dropout trigger remain
+  unverified; identified workload/reload hazards are removed, not claimed reproduced.
+- Review supplied references and record future amp recommendations without
+  importing third-party code/assets or changing amplifier processing.
+
 ## Plexi v0.4 — continuous audio / real-time workload correction (2026-11-18)
 
 - Replaced full-length interpreted 64-frame partition convolution with a

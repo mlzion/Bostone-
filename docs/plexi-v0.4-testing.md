@@ -71,7 +71,7 @@ listening remain pending. The following checklist still applies to those tests.
    machine. The WAV is external; missing files should clearly bypass, not pick
    a different listed IR. Verify the status filename and native list refresh.
 9. Test 1x/2x/4x, device-rate changes, render/live consistency, block sizes and
-   CPU at 20/200 ms and near-limit IR lengths. Higher rates increase partitions
+   CPU at 20/80 ms and near-limit IR lengths. Higher rates increase partitions
    and shorten supported duration. Do not claim uninterrupted live loading.
 10. Compare user cabinet sound against v0.3→ReaVerb with the same external WAV
     and carefully matched processing mode, crop, gain, wet/dry and filter settings.
@@ -92,7 +92,7 @@ and more demanding hot-swap requirements are better served by v0.3 + ReaVerb.
 - No WAV assets are committed; tests generate temporary PCM fixtures.
 
 
-## Continuous-audio correction — 2026-11-18
+## Previous continuous-audio correction (superseded engine) — 2026-11-18
 
 The original model-only checks did not detect the real-time workload problem:
 full-length interpreted partition convolution continued even with Cabinet off.
@@ -151,3 +151,29 @@ universal CPU guarantee. Actual Windows device-buffer scheduling and the user's
 reported live failure still need a confirmation retest. GUI/reload interactions,
 ReaVerb matching, listening and actual device underruns are not validated by an
 offline render. PR #6 remains open and must not be merged automatically.
+
+## Remaining-dropout correction — 2026-11-19 (current)
+
+**45 unittest cases passed**. Current engine is uniform 64-frame/128-point
+packed-real OLA, maximum 4096 taps. Frozen amp and all-slider contracts pass.
+Source checks cover memory boundaries, bounded work, packed endpoints/final pair,
+normalization and same-file restore reload suppression.
+
+**16 actual REAPER 7.47 Linux cases passed, each 30 seconds**, eight per rate at
+44.1/48 kHz: dry, amp-only versus v0.3, wet sparse-FIR, missing file, timed
+bypass/re-enable, oversized rejection, explicit 80 ms crop and same-file restore
+notifications. Direct-FIR error is at most 0.00000005960464477539063; bypass
+comparisons are exact. All memory canaries stay intact, each case loads once,
+FFT counter peaks stay bounded and stop during settled bypass. Restore tests
+call the production decision helper at 10/20 seconds; they do not demonstrate
+Windows actually sends serialization events then. Detailed results:
+[30-second native results](plexi-v0.4-live-results.json).
+
+Run `python3 tests/run_reaper_cabinet.py --reaper /path/to/reaper --seconds 30
+--report /tmp/report.json` (one line). REAPER is external, not bundled.
+These are actual JSFX compile/render tests, not listening or device deadline
+measurements. Windows live playback, GUI persistence, ReaVerb parity and xruns
+remain pending. Retest at least 60 seconds with the same DI/IR and device buffer,
+first external ReaVerb baseline, then internal cabinet. Use explicit 80 ms crop
+if needed. Record status, rate, buffer size and CPU peaks during any dropout.
+See [root-cause confidence and reference review](plexi-v0.4-reference-review.md).

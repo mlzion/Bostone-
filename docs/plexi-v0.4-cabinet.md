@@ -76,8 +76,8 @@ silently cropped to fit memory.
 
 - WAV input rates: 44.1/48 kHz, one or two channels. Decoding and resampling use
   REAPER's native media API. PCM/float codec variants still need host tests.
-- Maximum **32768 frames after resampling/cropping**: about 743 ms at 44.1 kHz,
-  683 ms at 48 kHz, 341 ms at 96 kHz, or 171 ms at 192 kHz. The selected length
+- Maximum **4096 frames after resampling/cropping**: about 92.9 ms at 44.1 kHz,
+  85.3 ms at 48 kHz, 42.7 ms at 96 kHz, or 21.3 ms at 192 kHz. The selected length
   is checked against this capacity. Oversized files are rejected with a message.
 - Mono IR is used on both independent inputs. Stereo means L input*IR L and
   R input*IR R; there is no crossfeed, sum-to-mono or four-channel true stereo.
@@ -106,3 +106,9 @@ use separate v0.3 → ReaVerb.
 
 See [engine and ReaVerb mapping](plexi-v0.4-technical.md) and
 [automated/manual validation](plexi-v0.4-testing.md).
+
+For a longer WAV at 44.1/48 kHz, explicitly set Maximum Length to **80 ms**
+and confirm Loaded status. At oversampled rates use a shorter crop or external
+ReaVerb. The default 0 remains full-file: oversized files fail to amp-only output,
+never silently shorten. Cropping can change cabinet tone. The user's cabinet-off
+plus external ReaVerb chain is the working baseline for Windows retesting.

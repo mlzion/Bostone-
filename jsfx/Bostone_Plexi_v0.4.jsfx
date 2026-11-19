@@ -134,29 +134,32 @@ function cab_pick() local(i,start,c) (
   strcpy_from(#cab_basename,#cab_dropdown,start);
   sprintf(#cab_file,"BostoneIR/%s",#cab_basename);
 );
+function cab_restore_selection() (
+  // Host state reads may repeat with an identical filename. Do not reopen it.
+  cab_restored=1;
+  strcmp(#cab_file,#cab_prior_restore)!==0 ? cab_reload=1;
+);
 function cab_reset() (
-  memset(cab_xl,0,cab_parts*256); memset(cab_xr,0,cab_parts*256);
-  memset(cab_tx_l,0,cab_tail_parts*1024); memset(cab_tx_r,0,cab_tail_parts*1024);
+  memset(cab_xl,0,cab_parts*128); memset(cab_xr,0,cab_parts*128);
   memset(cab_ol,0,128); memset(cab_il,0,128); memset(cab_ovl,0,128);
-  memset(cab_til,0,512); memset(cab_tol,0,512); memset(cab_tovl,0,512);
-  memset(cab_tdl,0,128);
-  cab_pos=0; cab_head=0; cab_tpos=0; cab_thead=0; cab_tdpos=0; cab_primed=0;
+  cab_pos=0; cab_head=0; cab_primed=0;
   cab_hp_l=cab_hp_r=cab_lp_l=cab_lp_r=0;
 );
-function cab_transform(hbase,ch,norm,start,size,parts) local(p,i,base,idx,n) (
-  n=size*2; p=0; loop(parts,
-    base=hbase+p*size*4; memset(base,0,size*4);
-    i=0; loop(size,
-      idx=start+p*size+i;
-      idx<cab_frames ? base[2*i]=cab_raw[idx*cab_channels+ch]*norm;
+function cab_transform(hbase,ch,norm) local(p,i,base,idx) (
+  p=0; loop(cab_parts,
+    base=hbase+p*128; memset(base,0,128);
+    i=0; loop(64,
+      idx=p*64+i;
+      idx<cab_frames ? base[i]=cab_raw[idx*cab_channels+ch]*norm;
       i+=1;
     );
-    fft(base,n); fft_permute(base,n);
-    i=0; loop(size*4,!finite(base[i]) ? cab_transform_ok=0; i+=1;); p+=1;
+    // Packed real FFT: DC/Nyquist at [0]/[1], remaining complex bins permuted.
+    fft_real(base,128);
+    i=0; loop(128,!finite(base[i]) ? cab_transform_ok=0; i+=1;); p+=1;
   );
 );
 function cab_load() local(f,ch,rate,count,want,got,i,peak,norm,val,ok) (
-  cab_ready=0; cab_mix=0; cab_frames=0; cab_parts=0; cab_tail_parts=0; cab_running=0;
+  cab_ready=0; cab_mix=0; cab_frames=0; cab_parts=0; cab_running=0;
   strcpy(#cab_active,""); strcpy(#cab_status,"No IR selected: amp-only bypass");
   ok=strlen(#cab_file)>=4;
   ok ? (strcpy_substr(#cab_ext,#cab_file,strlen(#cab_file)-4); ok=stricmp(#cab_ext,".wav")===0;);
@@ -175,7 +178,7 @@ function cab_load() local(f,ch,rate,count,want,got,i,peak,norm,val,ok) (
           want=count/ch;
           cab_length>0 ? want=min(want,max(1,floor(srate*cab_length/1000)));
           // Never silently truncate to capacity. Explicit user crop is allowed.
-          want>32768 ? (ok=0; strcpy(#cab_status,"IR exceeds 32768 processed frames: shorten explicitly or use ReaVerb");) : (
+          want>4096 ? (ok=0; strcpy(#cab_status,"IR exceeds live limit 4096 frames; set Maximum Length to 80 ms at 44.1/48 kHz: shorten explicitly or use ReaVerb");) : (
             got=file_mem(f,cab_raw,want*ch); ok=got===want*ch;
             peak=0; i=0;
             loop(got,
@@ -189,13 +192,10 @@ function cab_load() local(f,ch,rate,count,want,got,i,peak,norm,val,ok) (
               (cab_mode===2 || cab_mode===3) && peak>0 ? (
                 norm=(cab_mode===2 ? 1 : db(-18))/peak;
               );
-              cab_frames=want; cab_parts=ceil(min(want,256)/64);
-              cab_tail_parts=ceil(max(0,want-256)/256);
+              cab_frames=want; cab_parts=ceil(want/64);
               cab_transform_ok=1;
-              cab_transform(cab_hl,0,norm,0,64,cab_parts);
-              cab_transform(cab_hr,ch===1 ? 0 : 1,norm,0,64,cab_parts);
-              cab_transform(cab_th_l,0,norm,256,256,cab_tail_parts);
-              cab_transform(cab_th_r,ch===1 ? 0 : 1,norm,256,256,cab_tail_parts);
+              cab_transform(cab_hl,0,norm);
+              cab_transform(cab_hr,ch===1 ? 0 : 1,norm);
               cab_reset(); cab_ready=cab_transform_ok;
               cab_ready ? strcpy(#cab_active,#cab_file);
               peak>0 ? sprintf(#cab_status,"Loaded %d frames / %d ch; 64-sample engine latency",want,ch) : strcpy(#cab_status,"Silent IR loaded (wet output is silence)");
@@ -209,29 +209,34 @@ function cab_load() local(f,ch,rate,count,want,got,i,peak,norm,val,ok) (
   );
   cab_reload=0; cab_fade_request=0;
 );
-// Nonuniform OLA: 64-frame head + 256-frame tail starting at IR frame 256.
-// REAPER's native complex multiply replaces the old interpreted arithmetic loop.
-function cab_block_channel(input,history,hbank,output,overlap,head,parts,size,work,acc)
-local(i,p,idx,xp,hp,n,slots,j) (
-  n=size*2; slots=size*4; memset(work,0,slots); i=0;
-  loop(size,work[2*i]=input[i]; i+=1;);
-  fft(work,n); fft_permute(work,n);
-  memcpy(history+head*slots,work,slots);
-  memset(acc,0,slots); p=0;
+// Bounded single-rate real-FFT OLA: <=64 partitions, one fixed task per 64 frames.
+// No large tail FFT, long-period ring, or variable-size transform in the sample loop.
+function cab_block_channel(input,history,hbank,output,overlap,head,parts,work,acc)
+local(i,p,idx,xp,hp,j,last_r,last_i) (
+  memset(work,0,128); memcpy(work,input,64);
+  fft_real(work,128); memcpy(history+head*128,work,128);
+  memset(acc,0,128); p=0;
   loop(parts,
     idx=head-p; idx<0 ? idx+=parts;
-    xp=history+idx*slots; hp=hbank+p*slots;
-    memcpy(work,xp,slots); convolve_c(work,hp,n);
-    i=0; loop(size,
-      j=4*i;
-      acc[j]+=work[j]; acc[j+1]+=work[j+1];
+    xp=history+idx*128; hp=hbank+p*128;
+    memcpy(work,xp,128);
+    // The first packed pair is two REAL bins, never one complex number.
+    work[0]*=hp[0]; work[1]*=hp[1];
+    // Native multiply works on even groups. Handle the final packed pair explicitly.
+    convolve_c(work+2,hp+2,62);
+    last_r=work[126]; last_i=work[127];
+    work[126]=last_r*hp[126]-last_i*hp[127];
+    work[127]=last_r*hp[127]+last_i*hp[126];
+    i=0; loop(32,
+      j=4*i; acc[j]+=work[j]; acc[j+1]+=work[j+1];
       acc[j+2]+=work[j+2]; acc[j+3]+=work[j+3]; i+=1;
     ); p+=1;
   );
-  fft_ipermute(acc,n); ifft(acc,n); i=0;
-  loop(size,
-    output[i]=acc[2*i]/n+overlap[i];
-    overlap[i]=acc[2*(i+size)]/n; i+=1;
+  ifft_real(acc,128); i=0;
+  // Two forward real transforms plus inverse have convolution scale 4*N.
+  // For N=128 the unity-IR host calibration is 512 (not complex-FFT scaling).
+  loop(64,
+    output[i]=acc[i]/512+overlap[i]; overlap[i]=acc[i+64]/512; i+=1;
   );
 );
 // END CABINET FUNCTIONS
@@ -245,21 +250,17 @@ smooth_a=1-exp(-1/(0.020*srate)); ramp=1/(0.010*srate);
 sag_attack=1-exp(-1/(0.010*srate)); sag_release=1-exp(-1/(0.150*srate));
 lchan.reset(); rchan.reset(); initialized=0; counter=0; pdc_delay=0;
 
-// Explicit disjoint regions; every FFT slot is aligned within a 65536-item page.
-// Amp matrix [0..88] and dry ring [1920..2047] are never touched by FFT/reset.
-cab_hl=65536; cab_hr=66560; cab_xl=67584; cab_xr=68608;
-cab_th_l=131072; cab_th_r=262144; cab_tx_l=393216; cab_tx_r=524288;
-cab_raw=655360; cab_fft=1024; cab_sum=1280; cab_tfft=4096; cab_tsum=5120;
+// Compact, explicit disjoint regions. The amplifier owns [0..88].
+// Each spectrum is 128 real slots and stays within one 65536-item page.
+cab_hl=65536; cab_hr=73728; cab_xl=81920; cab_xr=90112;
+cab_raw=131072; cab_fft=1024; cab_sum=1280;
 cab_ol=1536; cab_or=1600; cab_il=1664; cab_ir=1728;
 cab_ovl=1792; cab_ovr=1856; cab_dl=1920; cab_dr=1984;
-cab_til=6144; cab_tir=6400; cab_tol=6656; cab_tor=6912;
-cab_tovl=7168; cab_tovr=7424; cab_tdl=7680; cab_tdr=7744;
-memset(1024,0,1024); memset(4096,0,3712);
-cab_dpos=0; cab_parts=0; cab_tail_parts=0; cab_ready=0; cab_running=0;
+memset(1024,0,1024);
+cab_dpos=0; cab_parts=0; cab_ready=0; cab_running=0;
 // Preserve cab_restored if @serialize has already loaded project state.
 cab_mix=0; cab_reload=1; cab_fade_request=0; cab_initial_load=1;
 cab_mode=-1; cab_length=-1; cab_initialized=0; cab_pos=0; cab_head=0; cab_primed=0;
-cab_tpos=0; cab_thead=0; cab_tdpos=0;
 strcpy_fromslider(#cab_last_dropdown,slider19);
 strcpy(#cab_status,"Select WAV in REAPER Data/BostoneIR; stop transport to load");
 
@@ -340,26 +341,11 @@ cab_ready && cab_should_run ? (
   cab_wl=cab_ol[cab_pos]; cab_wr=cab_or[cab_pos];
   cab_il[cab_pos]=finite(cab_in_l) ? cab_in_l : 0;
   cab_ir[cab_pos]=finite(cab_in_r) ? cab_in_r : 0;
-  cab_tail_parts>0 ? (
-    // Tail engine latency 256 + this 64 delay = IR offset 256 + global delay 64.
-    cab_wl+=cab_tdl[cab_tdpos]; cab_wr+=cab_tdr[cab_tdpos];
-    cab_tdl[cab_tdpos]=cab_tol[cab_tpos]; cab_tdr[cab_tdpos]=cab_tor[cab_tpos];
-    cab_tdpos+=1; cab_tdpos>=64 ? cab_tdpos=0;
-    cab_til[cab_tpos]=finite(cab_in_l) ? cab_in_l : 0;
-    cab_tir[cab_tpos]=finite(cab_in_r) ? cab_in_r : 0;
-    cab_tpos+=1;
-    cab_tpos>=256 ? (
-      cab_tpos=0;
-      cab_block_channel(cab_til,cab_tx_l,cab_th_l,cab_tol,cab_tovl,cab_thead,cab_tail_parts,256,cab_tfft,cab_tsum);
-      cab_block_channel(cab_tir,cab_tx_r,cab_th_r,cab_tor,cab_tovr,cab_thead,cab_tail_parts,256,cab_tfft,cab_tsum);
-      cab_thead+=1; cab_thead>=cab_tail_parts ? cab_thead=0;
-    );
-  );
   cab_pos+=1;
   cab_pos>=64 ? (
     cab_pos=0;
-    cab_block_channel(cab_il,cab_xl,cab_hl,cab_ol,cab_ovl,cab_head,cab_parts,64,cab_fft,cab_sum);
-    cab_block_channel(cab_ir,cab_xr,cab_hr,cab_or,cab_ovr,cab_head,cab_parts,64,cab_fft,cab_sum);
+    cab_block_channel(cab_il,cab_xl,cab_hl,cab_ol,cab_ovl,cab_head,cab_parts,cab_fft,cab_sum);
+    cab_block_channel(cab_ir,cab_xr,cab_hr,cab_or,cab_ovr,cab_head,cab_parts,cab_fft,cab_sum);
     cab_head+=1; cab_head>=cab_parts ? cab_head=0; cab_primed=1;
   );
 ) : cab_running=0;
@@ -385,8 +371,11 @@ cab_mix===0 ? (spl0=cab_al; spl1=cab_ar;) : (
 
 @serialize
 // Save a filename, not a menu index: folder reorder must not change the IR.
+// Capture mode BEFORE I/O. Saving and identical reads must not trigger audio I/O.
+cab_serial_read=file_avail(0)>=0;
+cab_serial_read ? strcpy(#cab_prior_restore,#cab_file);
 cab_format=1; file_var(0,cab_format); file_string(0,#cab_file);
-file_avail(0)>=0 ? (cab_reload=1; cab_restored=1;);
+cab_serial_read ? cab_restore_selection();
 
 @gfx 560 70
 // Functional filename/status only. Native sliders remain the entire control UI.

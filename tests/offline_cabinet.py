@@ -7,7 +7,7 @@ import wave
 from pathlib import Path
 
 B=64
-MAX_FRAMES=32768
+MAX_FRAMES=4096
 
 
 def fft(x,inverse=False):
@@ -142,21 +142,4 @@ class PostMix:
             s[0]+=g['hp']*(w-s[0]); w-=g['hpm']*s[0]
             s[1]+=g['lp']*(w-s[1]); w+=g['lpm']*(s[1]-w)
             out.append(g['dry']*d+g['wet']*g['level']*w)
-        return tuple(out)
-
-
-class Hybrid:
-    """64-frame first 256 taps; 256-frame remainder plus 64-frame alignment."""
-    def __init__(self,channels):
-        self.head=Partitioned([c[:256] for c in channels])
-        self.tail=Partitioned([c[256:] for c in channels],256) if len(channels[0])>256 else None
-        self.delay=[[0.]*64 for _ in range(2)]; self.pos=0
-
-    def tick(self,l,r):
-        head=self.head.tick(l,r)
-        if self.tail is None:return head
-        tail=self.tail.tick(l,r); out=[]
-        for ch in range(2):
-            out.append(head[ch]+self.delay[ch][self.pos]); self.delay[ch][self.pos]=tail[ch]
-        self.pos=(self.pos+1)%64
         return tuple(out)

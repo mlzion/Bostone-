@@ -1,0 +1,146 @@
+[
+  {
+    "case": "dry",
+    "rate": 44100,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 1.5956499280000571,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "amp",
+    "rate": 44100,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 1.663467070000479,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "wet",
+    "rate": 44100,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 3.4994078399995487,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  },
+  {
+    "case": "missing",
+    "rate": 44100,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 2.560655688001134,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "toggle",
+    "rate": 44100,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 5.608161083999221,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  },
+  {
+    "case": "oversized",
+    "rate": 44100,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 1.7599658890012506,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "cropped",
+    "rate": 44100,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 3.284495259000323,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  },
+  {
+    "case": "restored",
+    "rate": 44100,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 3.2114306740004395,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  },
+  {
+    "case": "dry",
+    "rate": 48000,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 1.6514011010003742,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "amp",
+    "rate": 48000,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 1.7618188859996735,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "wet",
+    "rate": 48000,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 3.648131743000704,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  },
+  {
+    "case": "missing",
+    "rate": 48000,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 1.9914932540013979,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "toggle",
+    "rate": 48000,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 3.6590838129995973,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  },
+  {
+    "case": "oversized",
+    "rate": 48000,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 1.728712899999664,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "cropped",
+    "rate": 48000,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 3.4984612400003243,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  },
+  {
+    "case": "restored",
+    "rate": 48000,
+    "audio_seconds": 30,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 3.4951276689989754,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  }
+]

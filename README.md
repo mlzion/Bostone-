@@ -154,7 +154,7 @@ compact status area displays the filename and errors; there is no waveform or
 skin. Stop transport and mute monitoring for synchronous loading/replacement.
 
 The engine adds a fixed **64 samples** (1.33 ms at 48 kHz), declared to REAPER;
-dry and cabinet bypass share that delay. Maximum IR size is **32768 processed
+dry and cabinet bypass share that delay. Maximum IR size is **4096 processed
 frames**; oversized IRs are rejected, never silently trimmed. No automatic peak
 normalization or gain compensation is enabled by default. For long IRs or more
 demanding browsing/hot-swap workflows, use v0.3 plus ReaVerb.
@@ -167,3 +167,9 @@ The continuous-audio correction passes native REAPER 7.47 Linux batch tests
 with buffer guards, exact aligned bypass and sparse-FIR comparisons. Windows
 real-time monitoring, UI persistence, audible ReaVerb parity and device CPU/xruns
 still require validation. No automatic merge is performed.
+
+The latest cabinet correction uses bounded 64-frame real-FFT partitions, not a
+nonuniform long tail. Select an explicit 80 ms crop for long files at 44.1/48 kHz,
+or use external ReaVerb. **45 automated tests and 16 native REAPER Linux cases
+of 30 seconds passed**; Windows live confirmation remains pending. See the
+[reference review and future amplifier recommendations](docs/plexi-v0.4-reference-review.md).

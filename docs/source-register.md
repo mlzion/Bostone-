@@ -53,7 +53,13 @@ WAV asset, IR, recording, GPL/LGPL code, or proprietary ReaVerb implementation
 is copied. Exact undocumented ReaVerb processing is not claimed.
 
 The continuous-audio correction uses the documented native convolve_c primitive
-inside an original nonuniform head/tail schedule. Official REAPER 7.47 Linux was
+inside an original bounded uniform packed-real FFT schedule. Official REAPER 7.47 Linux was
 used as an external test host; neither its binary nor WDL source is bundled.
 The optional runner adds test-only counter/guard output channels, not product
 features or amplifier modifications.
+
+The supplied reference archive was reviewed without importing source or IRs.
+[File identities, licensing boundaries, convolution observations and future amp
+recommendations](plexi-v0.4-reference-review.md) are recorded separately. Native
+FFT scaling/final-bin behavior was validated against REAPER output, not copied
+from the reference implementations.
