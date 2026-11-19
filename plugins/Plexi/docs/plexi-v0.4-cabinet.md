@@ -1,5 +1,7 @@
 # Bostone Plexi v0.4 — cabinet IR operation
 
+**Status update (2026-11-19):** The user confirms v0.4 continuous playback and successful cabinet switching in Windows REAPER. Earlier pending statements below describe the historical test stages; no new listening or runtime test is claimed by this path-only reorganization.
+
 A separately installable amplifier plus cabinet loader. The v0.3 amp functions,
 original ten sliders/defaults, initialization math and sample processing are
 unchanged. Cabinet processing is appended AFTER the amp's output and its own
@@ -9,7 +11,7 @@ model, skin, hum cancellation, waveform display, cabinet asset or IR bundled.
 ## Installation and selecting an external WAV
 
 1. In REAPER 7.x on Windows 11 choose **Options → Show REAPER resource path in
-   explorer/finder**. Copy `jsfx/Bostone_Plexi_v0.4.jsfx` into `Effects/Bostone`.
+   explorer/finder**. Copy `plugins/Plexi/jsfx/Bostone_Plexi_v0.4.jsfx` into `Effects/Bostone`.
    Do not rename/overwrite `Bostone_Plexi_v0.3.jsfx` or any preamp file.
 2. Create `Data/BostoneIR` in the same resource directory and copy your external
    WAVs into it. Typical normal-install location:

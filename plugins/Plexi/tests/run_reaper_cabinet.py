@@ -1,5 +1,5 @@
 """Optional actual-host integration regression. Requires a user-provided REAPER.
-Usage: python3 tests/run_reaper_cabinet.py --reaper /path/to/reaper --report /tmp/report.json
+Usage: python3 plugins/Plexi/tests/run_reaper_cabinet.py --reaper /path/to/reaper --report /tmp/report.json
 No REAPER binary, external IR, or WDL implementation is bundled/downloaded here.
 An isolated resource directory and synthetic PCM WAVs are generated temporarily.
 """

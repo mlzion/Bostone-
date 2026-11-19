@@ -1,192 +1,80 @@
-# Bostone v0.2 — JSFX filtering and drive experiments
+# Bostone audio plugins
 
-An original stereo preamp experiment inspired by Boston / Tom Scholz guitar tones.
-This is an exploratory signal chain, not an exact Rockman circuit model.
-Target: REAPER 7.x on Windows 11. No VST3, C++, or JUCE development is included.
+Bostone is a family of independently installable REAPER JSFX guitar processors.
+Each plugin has its own source, documentation and tests. These are experimental
+DSP models, not claims of exact circuit emulation or endorsement by referenced
+artists or manufacturers. No cabinet IRs or recordings are bundled.
 
-Input Gain → Pre-EQ → Drive / tanh soft clipping → Post-EQ → Output Gain.
-Each stage has its own enable switch; Master Bypass returns the dry stereo input
-following a 10 ms crossfade. The interface uses REAPER's standard JSFX sliders.
+| Project | Available versions | Purpose and status |
+| --- | --- | --- |
+| [Preamp](plugins/Preamp/README.md) | v0.1, v0.2, v0.2.1 | Guitar pre-EQ and cascaded soft clipping; v0.2.1 expands pre-EQ frequency ranges |
+| [Plexi](plugins/Plexi/README.md) | v0.3, v0.4 | Circuit-inspired amplifier; v0.4 adds a bounded cabinet IR loader, confirmed working by the user in Windows REAPER |
 
-## v0.2 and the v0.1 baseline
+## Repository layout
 
-v0.2 ships as **Bostone_Preamp_v0.2.jsfx**, displayed as **Bostone Preamp v0.2**.
-The original **Bostone_Preamp.jsfx** remains byte-for-byte unchanged, displayed as
-**Bostone v0.1 - Preamp Prototype**. Existing projects keep their original FX.
-No shared imports or external assets are needed. New version files will follow
-`Bostone_Preamp_vX.Y.jsfx`; the historical v0.1 file keeps its existing name.
+```text
+plugins/
+  Plexi/{jsfx,docs,tests}/
+  Preamp/{jsfx,docs,tests}/
+shared/
+  source-register.md
+  tests/test_jsfx_compatibility.py
+run_tests.py
+README.md
+CHANGELOG.md
+```
 
-v0.2 extends Pre High Cut to 400 Hz, adds an optional band-pass alternative and
-an optional two-stage drive. **Both mode selectors default to Legacy**; all
-original slider indices/defaults are retained. Compressor/sustainer work is
-explicitly deferred until filter/drive host testing establishes a stable base.
+`shared/` contains the existing cross-project algorithm/licensing register and
+source-compatibility checks. It contains no runtime DSP dependencies. Future
+plugins can have their own project directory; none are introduced here.
 
 ## Install in REAPER on Windows 11
 
-1. In REAPER, choose **Options → Show REAPER resource path in explorer/finder**.
-   This is the authoritative location, including for portable installations.
-   A typical normal installation uses `%APPDATA%\REAPER`.
-2. Create `Effects\Bostone` inside that resource directory.
-3. Copy both [Bostone_Preamp.jsfx](jsfx/Bostone_Preamp.jsfx) and
-   [Bostone_Preamp_v0.2.jsfx](jsfx/Bostone_Preamp_v0.2.jsfx) into that folder:
-   `%APPDATA%\REAPER\Effects\Bostone\` for a typical normal installation.
-   Do not rename or overwrite v0.1 with v0.2. Ensure Windows has not appended
-   `.txt` to either filename. No Python or other files are needed.
-4. Open a track's FX browser and choose **FX → Scan for new plugins** to refresh
-   the list. Search for `Bostone`; select **JS: Bostone v0.1 - Preamp Prototype**.
-   v0.2 appears separately as **JS: Bostone Preamp v0.2**. Both names must be
-   present. If either is missing, close/reopen the browser or restart REAPER.
-   For later v0.2 updates, replace only `Bostone_Preamp_v0.2.jsfx`, then remove
-   and re-add that FX in a temporary test project (save instance settings first).
-5. Start with a low monitor level. The default output is -6 dB, but large input
-   and EQ boosts can still exceed 0 dBFS. No final limiter is included.
+1. Choose **Options → Show REAPER resource path in explorer/finder**.
+2. Copy the desired `.jsfx` files from `plugins/Preamp/jsfx/` or
+   `plugins/Plexi/jsfx/` into the resource directory's **Effects/Bostone/** folder
+   (typically `%APPDATA%\REAPER\Effects\Bostone`). Keep filenames unchanged.
+3. Refresh the FX browser using **FX → Scan for new plugins** and select the
+   existing JSFX display name. Reopen the browser or restart REAPER if necessary.
 
-The JSFX **Edit** window should show no compilation error. See
-[manual testing](docs/testing.md) before treating the prototype as validated.
+The GitHub paths changed; the REAPER installation destination did not. Existing
+installations and project plugin identities need no migration. REAPER does not
+need the repository folders, Python, or shared files at runtime. Do not add a
+second installed copy under a different path. All historical versions remain
+separately available.
 
-## Original controls (indices 1–17 retained)
+Plexi v0.4 external WAVs still go in **Data/BostoneIR/** under the REAPER resource
+path. Its saved filenames, loading, controls and 4096-processed-frame capacity
+are unchanged. See [cabinet installation/usage](plugins/Plexi/docs/plexi-v0.4-cabinet.md).
 
-| Section | Control | Range | Default |
-| --- | --- | --- | --- |
-| Input | Gain | -24 to +24 dB | 0 dB |
-| Input | Enable | Off / On | On |
-| Pre-EQ | Low Cut | 40–300 Hz | 80 Hz |
-| Pre-EQ | Low-Mid Gain | -12 to +12 dB | 0 dB |
-| Pre-EQ | Low-Mid Frequency | 150–1000 Hz | 400 Hz |
-| Pre-EQ | High Cut | v0.1: 2000–15000 Hz; v0.2: 400–15000 Hz | 10000 Hz |
-| Pre-EQ | Enable | Off / On | On |
-| Distortion | Drive | 1–20 | 3 |
-| Distortion | Enable | Off / On | On |
-| Post-EQ | Low Gain | -12 to +12 dB | 0 dB |
-| Post-EQ | Mid Gain | -12 to +12 dB | 0 dB |
-| Post-EQ | Mid Frequency | 400–4000 Hz | 1200 Hz |
-| Post-EQ | High Gain | -12 to +12 dB | 0 dB |
-| Post-EQ | Enable | Off / On | On |
-| Output | Gain | -24 to +12 dB | -6 dB |
-| Output | Enable | Off / On | On |
-| Global | Master Bypass | Off / On | Off |
+## Development and tests
 
-The added Input and Output Enable controls make gain stages independently
-bypassable. Drive 1 still applies tanh; use Distortion Enable to remove it.
-
-## Added v0.2 controls
-
-| Index | Control | Range | Default |
-| --- | --- | --- | --- |
-| 18 | Pre-EQ Mode | Legacy HP Bell LP / Band-pass | Legacy |
-| 19 | Band-pass Center | 150–4000 Hz | 685 Hz |
-| 20 | Band-pass Q | 0.25–4 | 1 |
-| 21 | Band-pass Level | -12 to +12 dB | 0 dB |
-| 22 | Drive Mode | Legacy Tanh / Cascaded | Legacy |
-| 23 | Cascade Stage Gain | 0–18 dB | 12 dB |
-| 24 | Cascade Interstage Cut | 800–12000 Hz | 6000 Hz |
-| 25 | Cascade Level Trim | -12 to +12 dB | 0 dB |
-
-In band-pass mode, Low Cut/Low-Mid/High Cut controls remain stored but only affect
-Legacy pre-EQ. Band-pass Level controls center gain separately from Q. In Legacy
-drive mode, cascade controls have no effect. Existing Pre-EQ and Distortion
-Enable switches bypass either selected mode. Mode changes crossfade for 10 ms.
-
-For a v0.1 comparison, insert both FX on the same track, transfer the original
-17 values manually, and enable only one FX at a time using REAPER's FX bypass
-checkboxes. Do not run both active in series for this comparison. Keep selectors
-18 and 22 on Legacy. Existing v0.1 presets/projects remain attached to v0.1;
-there is no automatic preset migration between distinct JSFX identities.
-See [the full A/B procedure](docs/testing.md#v02-acceptance-and-ab-plan).
-
-## Offline checks
-
-With Python 3.9 or newer, from the repository root:
+From the repository root with Python 3.9+ (standard library only):
 
 ```console
-python -m unittest discover -s tests -v
+python3 run_tests.py
+python3 run_tests.py --plugin Plexi
+python3 run_tests.py --plugin Preamp
 ```
 
-Only the Python standard library is required. This is a separate numerical
-reference model, not an EEL2 interpreter or REAPER host. It cannot establish
-JSFX compilation, automation integration, audible quality, or CPU performance.
-The same command also runs conservative compatibility checks on the actual JSFX
-source. See [syntax corrections and runtime status](CHANGELOG.md).
+The runner uses separate discovery processes for each project, then runs the
+existing shared compatibility suite. Individual project commands include those
+shared checks, which scan all installed source files in this repository.
+Direct discovery is also supported with `python3 -m unittest discover -s
+plugins/Plexi/tests -v` or `plugins/Preamp/tests` (one line per command).
+Cross-project historical source-identity assertions remain in the tests.
 
-See [signal chain](docs/signal-chain.md), [DSP notes](docs/dsp-notes.md),
-[source register](docs/source-register.md), and [test procedure](docs/testing.md).
+Optional actual REAPER host tests:
 
-## Bostone Plexi v0.3 — standalone amplifier prototype
+```console
+python3 plugins/Plexi/tests/run_reaper_cabinet.py --reaper /path/to/reaper --seconds 30 --report /tmp/report.json
+```
 
-Plexi is a separately installable experiment inspired by a cranked Marshall
-1959 Super Lead, not a claim of exact circuit or EL34 emulation. The existing
-v0.1 and v0.2 files remain unchanged; all three FX can be installed together.
+Numerical/source tests are not a substitute for REAPER compilation or listening.
+Prior native Linux results and the user's Windows confirmation are documented
+in the Plexi project. This reorganization changes paths/documentation only;
+all five production JSFX files retain their original bytes.
 
-Copy [Bostone_Plexi_v0.3.jsfx](jsfx/Bostone_Plexi_v0.3.jsfx) alongside the other
-JSFX in the REAPER resource-path `Effects/Bostone` folder. Refresh the FX browser
-with **FX → Scan for new plugins** and select **JS: Bostone Plexi v0.3**. Do not
-rename or overwrite the older files. No runtime dependencies or cabinet IRs
-are included.
-
-Input conditioning → bright asymmetric preamp → adjustable interstage bass
-filter → second preamp → interactive passive RC tone stack → phase inverter
-→ push-pull power-stage approximation → Presence/output filtering → level.
-Start with clean DI and defaults (Preamp 6 dB, Power 3 dB, Output -12 dB), at a
-low monitor volume. When driven by v0.2, begin with Input -12 dB / Output -18 dB.
-
-- [Installation, all ten controls, 2x/4x host oversampling and A/B checklist](docs/plexi-v0.3-testing.md)
-- [DSP architecture, tone-stack netlist, dynamics and limitations](docs/plexi-v0.3-dsp.md)
-- [Reviewed sources, verified selected values and explicit substitutions](docs/plexi-v0.3-references.md)
-
-Intended chain: **Bostone v0.2 → Plexi → ReaVerb (your Marshall 1960 IR)**.
-Compare with **v0.2 → Flextron (cab disabled) → ReaVerb (same IR)** at matched
-perceived loudness. No custom oversampling, reverb, widening or cabinet model
-is in Plexi. REAPER compilation/listening/CPU/actual host oversampling tests
-remain pending; automated numerical checks do not establish host compatibility.
-Do not merge the Plexi PR automatically.
-
-## Bostone Plexi v0.4 — integrated cabinet IR loader
-
-Install [Bostone_Plexi_v0.4.jsfx](jsfx/Bostone_Plexi_v0.4.jsfx) alongside v0.3;
-select **Bostone Plexi v0.4**. The amplifier's original DSP, ten controls and
-settings are unchanged. Cabinet convolution follows its output, with mono/stereo
-44.1/48 kHz WAV loading, host rate conversion, explicit raw/attenuation/peak modes,
-IR level, wet/dry, wet HP/LP, optional length crop, saved filename and bypass.
-
-Place external WAVs in the REAPER resource directory's **Data/BostoneIR** folder
-and select one using the native IR WAV dropdown. No IR asset is bundled. The
-compact status area displays the filename and errors; there is no waveform or
-skin. Stop transport and mute monitoring for synchronous loading/replacement.
-
-The engine adds a fixed **64 samples** (1.33 ms at 48 kHz), declared to REAPER;
-dry and cabinet bypass share that delay. Maximum IR size is **4096 processed
-frames**; oversized IRs are rejected, never silently trimmed. No automatic peak
-normalization or gain compensation is enabled by default. For long IRs or more
-demanding browsing/hot-swap workflows, use v0.3 plus ReaVerb.
-
-- [Installation, IR controls, persistence and limitations](docs/plexi-v0.4-cabinet.md)
-- [Engine design, memory/latency and researched ReaVerb mapping](docs/plexi-v0.4-technical.md)
-- [Automated checks and REAPER comparison checklist](docs/plexi-v0.4-testing.md)
-
-The continuous-audio correction passes native REAPER 7.47 Linux batch tests
-with buffer guards, exact aligned bypass and sparse-FIR comparisons. Windows
-real-time monitoring, UI persistence, audible ReaVerb parity and device CPU/xruns
-still require validation. No automatic merge is performed.
-
-The latest cabinet correction uses bounded 64-frame real-FFT partitions, not a
-nonuniform long tail. Select an explicit 80 ms crop for long files at 44.1/48 kHz,
-or use external ReaVerb. **45 automated tests and 16 native REAPER Linux cases
-of 30 seconds passed**; Windows live confirmation remains pending. See the
-[reference review and future amplifier recommendations](docs/plexi-v0.4-reference-review.md).
-
-## Bostone Preamp v0.2.1 — expanded pre-EQ range
-
-Install [Bostone_Preamp_v0.2.1.jsfx](jsfx/Bostone_Preamp_v0.2.1.jsfx) alongside
-older files; the FX browser displays **Bostone Preamp v0.2.1**. v0.1, v0.2 and
-Plexi v0.3 are unchanged. Defaults and all other processing remain as in v0.2.
-
-| Control | v0.2.1 range | Default |
-| --- | --- | --- |
-| Pre Low Cut | 40–1000 Hz | 80 Hz |
-| Pre Low-Mid Frequency | 150–2000 Hz | 400 Hz |
-| Pre High Cut | 400–10000 Hz | 10000 Hz |
-
-Use **Legacy** Pre-EQ Mode with Pre-EQ enabled to try an 800 Hz high-pass before
-Plexi; these three controls remain inactive in the alternative Band-pass mode.
-See [installation, compatibility notes and test plan](docs/preamp-v0.2.1.md).
-Actual REAPER compilation/listening and click checks remain pending.
+See [history](CHANGELOG.md), [source and licensing register](shared/source-register.md),
+and each project's documentation. No project-wide redistribution license has
+been selected; reference licenses do not relicense independently written code.

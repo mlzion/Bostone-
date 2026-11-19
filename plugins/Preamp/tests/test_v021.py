@@ -20,7 +20,7 @@ class V021Tests(unittest.TestCase):
                    'Bostone_Preamp_v0.2.jsfx':'d626e06b4d4a2eac3a85471d3d121b344c810092',
                    'Bostone_Plexi_v0.3.jsfx':'66d21f8843d78335bc3e178b50ff76cfcc2b2c6f'}
         for path,sha in preserved.items():
-            b=(ROOT/'jsfx'/path).read_bytes()
+            b=((ROOT.parent/'Plexi/jsfx'/path) if 'Plexi' in path else (ROOT/'jsfx'/path)).read_bytes()
             self.assertEqual(hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest(),sha,path)
         old=(ROOT/'jsfx/Bostone_Preamp_v0.2.jsfx').read_text()
         new=(ROOT/'jsfx/Bostone_Preamp_v0.2.1.jsfx').read_text()

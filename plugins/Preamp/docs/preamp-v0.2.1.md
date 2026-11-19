@@ -28,7 +28,7 @@ that chain, so changing these inactive controls will not affect audio.
 1. Use **Options → Show REAPER resource path in explorer/finder** and open/create
    `Effects/Bostone`. A typical standard installation is
    `%APPDATA%\REAPER\Effects\Bostone`.
-2. Copy `jsfx/Bostone_Preamp_v0.2.1.jsfx` there, retaining the exact filename.
+2. Copy `plugins/Preamp/jsfx/Bostone_Preamp_v0.2.1.jsfx` there, retaining the exact filename.
    Do not overwrite/rename `Bostone_Preamp.jsfx`, `Bostone_Preamp_v0.2.jsfx`, or
    `Bostone_Plexi_v0.3.jsfx`. No imports or other runtime files are needed.
 3. Refresh using **FX → Scan for new plugins** in the FX browser. Search for
@@ -55,7 +55,7 @@ Keep levels modest and compare at matched perceived loudness. Suggested chain:
 Run the complete repository suite:
 
 ```console
-python3 -m unittest discover -s tests -v
+python3 run_tests.py --plugin Preamp
 ```
 
 The new tests:

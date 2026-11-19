@@ -1,5 +1,16 @@
 # Changelog
 
+## Multi-plugin repository organization (2026-11-19)
+
+- Move Plexi and Preamp sources, documentation and tests into independent
+  `plugins/Plexi` and `plugins/Preamp` projects; retain all historical versions.
+- Retain the existing cross-project source register and compatibility checks
+  under `shared`; add family/project READMEs and a standard-library test runner.
+- Update paths and links only. All five JSFX files are byte-for-byte unchanged,
+  including v0.4 convolution, controls, identities and 4096-frame limit.
+- REAPER installation remains Effects/Bostone with IRs in Data/BostoneIR.
+- User confirms v0.4 continuous playback and cabinet switching on Windows REAPER.
+
 ## Plexi v0.4 — remaining cabinet dropout correction (2026-11-19)
 
 - Replace bursty nonuniform convolution with bounded 64-frame/128-point real FFT
