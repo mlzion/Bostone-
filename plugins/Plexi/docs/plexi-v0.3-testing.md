@@ -5,7 +5,7 @@
 1. Choose **Options → Show REAPER resource path in explorer/finder**. In that
    directory open `Effects/Bostone` (create it if needed). For a normal Windows
    install this is typically `%APPDATA%\REAPER\Effects\Bostone`.
-2. Copy only `jsfx/Bostone_Plexi_v0.3.jsfx` there. Do not rename/overwrite either
+2. Copy only `plugins/Plexi/jsfx/Bostone_Plexi_v0.3.jsfx` there. Do not rename/overwrite either
    existing Bostone file. Plexi has no imports or other runtime files. Check that
    Windows has not appended `.txt` to the filename.
 3. In the FX browser use **FX → Scan for new plugins** and search for
@@ -126,7 +126,7 @@ acceptance criteria remain pending; keep the PR unmerged for review and testing.
 
 ## Recorded development results (2026-11-17)
 
-- `python3 -m unittest discover -s tests -v`: **23 tests passed** — 14 retained
+- `python3 run_tests.py`: **23 tests passed** — 14 retained
   baseline/compatibility cases and nine Plexi cases. Final run completed in
   about 5.2 seconds on Linux/Python (not a real-time CPU benchmark).
 - `git diff --cached --check`: passed.

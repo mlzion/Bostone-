@@ -1,5 +1,7 @@
 # Supplied JSFX reference review — 2026-11-19
 
+**Status update (2026-11-19):** The user confirms v0.4 continuous playback and successful cabinet switching in Windows REAPER. Earlier pending statements below describe the historical test stages; no new listening or runtime test is claimed by this path-only reorganization.
+
 Reviewed the user-supplied `Plexi_JSFX_References.zip` locally. These are reference
 files, not production dependencies. No source, embedded IR, drawing or asset
 from the archive is copied into Bostone. Its README flags LGPL for Cockos/Tukan;

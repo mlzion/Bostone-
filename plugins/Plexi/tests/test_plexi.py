@@ -13,7 +13,7 @@ RATES=(44100,48000,88200,96000,176400,192000,384000)
 
 class PlexiTests(unittest.TestCase):
     def test_source_and_preserved_baseline(self):
-        old=(ROOT/'jsfx/Bostone_Preamp.jsfx').read_bytes()
+        old=(ROOT.parent/'Preamp/jsfx/Bostone_Preamp.jsfx').read_bytes()
         self.assertEqual(hashlib.sha1(b'blob '+str(len(old)).encode()+b'\0'+old).hexdigest(),'442fee3dc5c81beb6f7269381dbf5b840d948d32')
         s=(ROOT/'jsfx/Bostone_Plexi_v0.3.jsfx').read_text()
         self.assertEqual(re.findall(r'^@\w+',s,re.M),['@init','@slider','@sample'])

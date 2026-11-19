@@ -40,8 +40,8 @@ def compatibility_errors(source):
 
 class CompatibilityTests(unittest.TestCase):
     def test_actual_production_source(self):
-        root = Path(__file__).parents[1]
-        files = sorted((root/'jsfx').rglob('*.jsfx'))
+        root = Path(__file__).parents[2]
+        files = sorted((root/'plugins').rglob('*.jsfx'))
         self.assertTrue(files)
         for path in files:
             self.assertEqual(compatibility_errors(path.read_text()), [], str(path))

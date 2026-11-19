@@ -1,11 +1,13 @@
 # v0.4 cabinet validation
 
+**Status update (2026-11-19):** The user confirms v0.4 continuous playback and successful cabinet switching in Windows REAPER. Earlier pending statements below describe the historical test stages; no new listening or runtime test is claimed by this path-only reorganization.
+
 ## Automated suite
 
 From the repository root, Python 3.9+:
 
 ```console
-python3 -m unittest discover -s tests -v
+python3 run_tests.py --plugin Plexi
 ```
 
 The existing suite plus new cabinet cases cover:
@@ -84,7 +86,7 @@ and more demanding hot-swap requirements are better served by v0.3 + ReaVerb.
 ## Recorded initial-development results — 2026-11-18
 
 - Complete suite: **41 tests passed** (32 retained baseline/amp/preamp cases plus
-  nine cabinet cases), using `python3 -m unittest discover -s tests -v`.
+  nine cabinet cases), using `python3 run_tests.py`.
 - `git diff --cached --check`: passed.
 - v0.3 source identity and original amp sections/sliders are preserved; native
   FFT, decoder, requested-rate SRC, selector/persistence and reload lifecycle
@@ -121,7 +123,7 @@ bypass, and clear/re-prime before re-enable without touching the dry ring.
 Provide your own installed REAPER executable (not bundled/downloaded by tests):
 
 ```console
-python3 tests/run_reaper_cabinet.py --reaper /path/to/reaper --report /tmp/reaper-cabinet-results.json
+python3 plugins/Plexi/tests/run_reaper_cabinet.py --reaper /path/to/reaper --report /tmp/reaper-cabinet-results.json
 ```
 
 Example Windows executable argument: `--reaper "C:\Program Files\REAPER (x64)\reaper.exe"`.
@@ -169,7 +171,7 @@ call the production decision helper at 10/20 seconds; they do not demonstrate
 Windows actually sends serialization events then. Detailed results:
 [30-second native results](plexi-v0.4-live-results.json).
 
-Run `python3 tests/run_reaper_cabinet.py --reaper /path/to/reaper --seconds 30
+Run `python3 plugins/Plexi/tests/run_reaper_cabinet.py --reaper /path/to/reaper --seconds 30
 --report /tmp/report.json` (one line). REAPER is external, not bundled.
 These are actual JSFX compile/render tests, not listening or device deadline
 measurements. Windows live playback, GUI persistence, ReaVerb parity and xruns

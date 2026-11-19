@@ -8,7 +8,7 @@ From the repository root with Python 3.9+:
 python -m unittest discover -s tests -v
 ```
 
-The harness is an independent numerical model in `tests/offline_dsp.py`, not a
+The harness is an independent numerical model in `plugins/Preamp/tests/offline_dsp.py`, not a
 JSFX parser, EEL2 interpreter, or REAPER integration. A lightweight source
 contract check detects a few important configuration mismatches but does not
 prove source/model equivalence. Keep both implementations aligned when changing
@@ -89,7 +89,7 @@ retest: install this exact PR version, confirm no JSFX editor errors, exercise
 all 17 sliders and stage/master bypass switches, and verify stereo audio.
 REAPER is not installed in this development workspace, so no runtime validation
 of this revision was performed here. Keep PR #1 unmerged until that retest passes.
-See [changelog](../CHANGELOG.md) for the exact scope of corrections.
+See [changelog](../../../CHANGELOG.md) for the exact scope of corrections.
 
 After these corrections, all 14 tests passed on 2026-11-17 (the original nine
 numerical/source-contract cases plus five compatibility regression cases).

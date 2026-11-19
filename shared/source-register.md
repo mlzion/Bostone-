@@ -1,6 +1,6 @@
 # Source and algorithm register
 
-All production DSP in `jsfx/Bostone_Preamp.jsfx` was independently written for
+All production DSP in `plugins/Preamp/jsfx/Bostone_Preamp.jsfx` was independently written for
 Bostone. No third-party JSFX, DSP implementation, cabinet IR, audio recording,
 GPL/LGPL implementation, or binary dependency was imported. The test model is
 also original project code and uses Python's standard library only.
@@ -34,7 +34,7 @@ uses only Python's standard library. v0.1 production source remains unchanged.
 
 ## Plexi v0.3
 
-See [Plexi research register](plexi-v0.3-references.md) for the required Marshall
+See [Plexi research register](../plugins/Plexi/docs/plexi-v0.3-references.md) for the required Marshall
 schematic, both supplied circuit analyses, official EEL2 docs, selected values,
 source-access limitations and explicit substitutions. Unlike the initial v0.1
 register, these references were retrieved and reviewed during development.
@@ -44,7 +44,7 @@ techniques. No code, models, images, IRs or recordings are copied from the sites
 
 ## Plexi v0.4 cabinet engine
 
-See [v0.4 research and technical notes](plexi-v0.4-technical.md) for the official
+See [v0.4 research and technical notes](../plugins/Plexi/docs/plexi-v0.4-technical.md) for the official
 JSFX I/O, serialization, strings, FFT/memory/PDC references and Cockos ReaVerb
 guide reviewed before implementation. Partitioned overlap-add, linked
 peak scaling, FIR resampling-area correction and the test FFT/SRC are original
@@ -60,6 +60,6 @@ features or amplifier modifications.
 
 The supplied reference archive was reviewed without importing source or IRs.
 [File identities, licensing boundaries, convolution observations and future amp
-recommendations](plexi-v0.4-reference-review.md) are recorded separately. Native
+recommendations](../plugins/Plexi/docs/plexi-v0.4-reference-review.md) are recorded separately. Native
 FFT scaling/final-bin behavior was validated against REAPER output, not copied
 from the reference implementations.
