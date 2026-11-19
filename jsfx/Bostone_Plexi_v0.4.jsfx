@@ -1,0 +1,389 @@
+desc:Bostone Plexi v0.4
+// Unchanged v0.3 amplifier core followed by cabinet convolution; no custom oversampling.
+// Amp notes: docs/plexi-v0.3-dsp.md. Cabinet: docs/plexi-v0.4-technical.md.
+in_pin:Left
+in_pin:Right
+out_pin:Left
+out_pin:Right
+slider1:1<0,1,1{Bypass,Enabled}>Amp Enable
+slider2:0<-24,24,0.1>Input Gain (dB)
+slider3:6<0,36,0.1>Preamp Drive (dB)
+slider4:5<0,10,0.01>Bass
+slider5:5<0,10,0.01>Middle
+slider6:5<0,10,0.01>Treble
+slider7:4<0,10,0.01>Presence
+slider8:3<0,24,0.1>Power Drive (dB)
+slider9:5<0,10,0.01>Bass Tightness
+slider10:-12<-36,0,0.1>Output Level (dB)
+
+// Cabinet controls append after all unchanged v0.3 controls.
+slider11:1<0,1,1{Bypass,Enabled}>Cabinet Enable
+slider12:0<-36,12,0.1>IR Level (dB)
+slider13:0<0,3,1{Normal Raw,Apply -18 dB,Peak Normalize 0 dBFS,Peak Normalize -18 dBFS}>IR Processing
+slider14:0<-120,6,0.1>Cabinet Wet (dB; -120=mute)
+slider15:-120<-120,6,0.1>Cabinet Dry (dB; -120=mute)
+slider16:0<0,2000,1>Cabinet Highpass (Hz; 0=off)
+slider17:0<0,20000,1>Cabinet Lowpass (Hz; 0=off)
+slider18:0<0,500,1>IR Maximum Length (ms; 0=full)
+slider19:/BostoneIR:None:IR WAV (REAPER Data/BostoneIR)
+
+@init
+function finite(x) ((x-x) === 0;);
+function bound(x,lo,hi) (finite(x) ? min(hi,max(lo,x)) : lo;);
+function db(x) (exp(log(10)*x/20););
+function soft(x) local(e) (e=exp(-2*abs(x)); (x<0 ? -1 : 1)*(1-e)/(1+e););
+function triode(x,bias,z0) (soft(x+bias)-z0;);
+function rational(x) (x/(1+abs(x)););
+// Smooth positive conduction, then finite plate-current ceiling. Not a tube law.
+function current(x) local(q) (q=max(0,x)+log(1+exp(-abs(x))); q/(1+q););
+function pole(f) (1-exp(-2*$pi*min(f,0.45*srate)/srate););
+
+// Passive tone stack: S=0,T=1,B=2,W=3,O=4. mat holds a 5x10 augmented matrix.
+// Ideal low-Z source. Treble 220k, Bass 1M, split Middle 25k, 2M load.
+// Upper middle track is in series with Bass; its junction can be eliminated.
+function stamp(i,j,g) (
+  mat[i*10+i]+=g;
+  j>=0 ? (mat[j*10+j]+=g; mat[i*10+j]-=g; mat[j*10+i]-=g;);
+);
+function rebuild() local(i,j,k,p,f,rb,rm,rt1,rt2) (
+  i=0; loop(50,mat[i]=0; i+=1;);
+  i=0; loop(5,mat[i*10+5+i]=1; i+=1;);
+  rb=max(100,1000000*bass_g*bass_g)+max(25,25000*(1-mid_g));
+  rm=max(25,25000*mid_g);
+  rt1=max(100,220000*(1-treble_g)); rt2=max(100,220000*treble_g);
+  stamp(0,-1,1/33000); stamp(1,-1,ct_g);
+  stamp(0,2,cb_g); stamp(0,3,cm_g);
+  stamp(2,3,1/rb); stamp(3,-1,1/rm);
+  stamp(1,4,1/rt1); stamp(4,2,1/rt2); stamp(4,-1,1/2000000);
+  // Positive definite conductance matrix; positive pivots, no audio-rate iteration.
+  k=0; loop(5,
+    p=max(0.000000000001,mat[k*10+k]);
+    j=0; loop(10,mat[k*10+j]/=p; j+=1;);
+    i=0; loop(5,
+      i!=k ? (f=mat[i*10+k]; j=0; loop(10,mat[i*10+j]-=f*mat[k*10+j]; j+=1;););
+      i+=1;
+    );
+    k+=1;
+  );
+  i=0; loop(5,j=0; loop(5,inv[i*5+j]=mat[i*10+5+j]; j+=1;); i+=1;);
+  last_b=bass_g; last_m=mid_g; last_t=treble_g;
+);
+function reset() instance(inlo,inhi,brightlo,couplo,dcpre,dcpost,preslo,out1,out2,env,ht,hb,hm) (
+  inlo=inhi=brightlo=couplo=dcpre=dcpost=preslo=out1=out2=env=ht=hb=hm=0;
+);
+function amp(x) instance(inlo,inhi,brightlo,couplo,dcpre,dcpost,preslo,out1,out2,env,ht,hb,hm)
+local(v,rs,rt,rb,rw,vs,vt,vb,vw,vo,pa,pb,rail,target,rate,y) (
+  // 1. Input conditioning and bright-channel cathode-bypass-inspired tilt.
+  v=bound(x,-16,16)*input_g;
+  inlo+=input_hp*(v-inlo); v-=inlo;
+  inhi+=input_lp*(v-inhi); v=inhi;
+  brightlo+=bright_p*(v-brightlo); v+=0.9*(v-brightlo);
+  // 2. Biased first preamp triode; zero-input offset is removed analytically.
+  v=triode(0.8*pre_g*v,0.22,pre_zero);
+  // 3. Coupling / tightness BEFORE later nonlinear stages.
+  couplo+=tight_g*(v-couplo); v-=couplo;
+  // 4. Different hot second-stage curve; DC coupling correction follows.
+  v=rational(3*v+0.1)-rational(0.1);
+  dcpre+=dc_p*(v-dcpre); v-=dcpre;
+  // 5. Trapezoidal capacitor companions; two channels share inverse, not histories.
+  rs=v/33000-hb-hm; rt=ct_g*v-ht; rb=hb; rw=hm;
+  vs=inv[0]*rs+inv[1]*rt+inv[2]*rb+inv[3]*rw;
+  vt=inv[5]*rs+inv[6]*rt+inv[7]*rb+inv[8]*rw;
+  vb=inv[10]*rs+inv[11]*rt+inv[12]*rb+inv[13]*rw;
+  vw=inv[15]*rs+inv[16]*rt+inv[17]*rb+inv[18]*rw;
+  vo=inv[20]*rs+inv[21]*rt+inv[22]*rb+inv[23]*rw;
+  ht=-2*ct_g*(vt-v)-ht; hb=-2*cb_g*(vs-vb)-hb; hm=-2*cm_g*(vs-vw)-hm;
+  // 6. Modest loss recovery, then unequal long-tail-pair-inspired phase branches.
+  v=3*vo;
+  pa=triode(2*v,0.04,pi_zero); pb=triode(-1.9*v,0.04,pi_zero);
+  // 7. Independent per-channel load memory: fixed modest sag surrogate.
+  target=0.5*(abs(pa)+abs(pb)); rate=target>env ? sag_attack : sag_release;
+  env+=rate*(target-env); rail=1/(1+0.18*env);
+  v=2*rail*(current(3*(power_g*pa-0.1))-current(3*(power_g*pb-0.1)));
+  // 8. DC removal; feed-forward surrogate of reduced high-frequency feedback.
+  dcpost+=dc_p*(v-dcpost); v-=dcpost;
+  preslo+=presence_p*(v-preslo); v+=presence_g*(v-preslo);
+  out1+=output_p*(v-out1); out2+=output_p*(out1-out2);
+  // 9. Explicit bounded safety saturation before the user's nonpositive output gain.
+  y=0.8*soft(out2/0.8)*output_g;
+  !finite(y) || abs(ht)>1000000 || abs(hb)>1000000 || abs(hm)>1000000 ? (
+    inlo=inhi=brightlo=couplo=dcpre=dcpost=preslo=out1=out2=env=ht=hb=hm=0; y=0;
+  );
+  abs(inlo)<0.000000000000000000000000000001 ? inlo=0;
+  abs(inhi)<0.000000000000000000000000000001 ? inhi=0;
+  abs(brightlo)<0.000000000000000000000000000001 ? brightlo=0;
+  abs(couplo)<0.000000000000000000000000000001 ? couplo=0;
+  abs(dcpre)<0.000000000000000000000000000001 ? dcpre=0;
+  abs(dcpost)<0.000000000000000000000000000001 ? dcpost=0;
+  abs(preslo)<0.000000000000000000000000000001 ? preslo=0;
+  abs(out1)<0.000000000000000000000000000001 ? out1=0;
+  abs(out2)<0.000000000000000000000000000001 ? out2=0;
+  abs(env)<0.000000000000000000000000000001 ? env=0;
+  abs(ht)<0.000000000000000000000000000001 ? ht=0;
+  abs(hb)<0.000000000000000000000000000001 ? hb=0;
+  abs(hm)<0.000000000000000000000000000001 ? hm=0;
+  y;
+);
+// CABINET FUNCTIONS: original amp definitions above are unchanged.
+function cab_pick() local(i,start,c) (
+  // The documented selector is one Data subdirectory. Canonicalize its basename.
+  i=0; start=0;
+  loop(strlen(#cab_dropdown),
+    c=str_getchar(#cab_dropdown,i); (c===47 || c===92) ? start=i+1; i+=1;
+  );
+  strcpy_from(#cab_basename,#cab_dropdown,start);
+  sprintf(#cab_file,"BostoneIR/%s",#cab_basename);
+);
+function cab_restore_selection() (
+  // Host state reads may repeat with an identical filename. Do not reopen it.
+  cab_restored=1;
+  strcmp(#cab_file,#cab_prior_restore)!==0 ? cab_reload=1;
+);
+function cab_reset() (
+  memset(cab_xl,0,cab_parts*128); memset(cab_xr,0,cab_parts*128);
+  memset(cab_ol,0,128); memset(cab_il,0,128); memset(cab_ovl,0,128);
+  cab_pos=0; cab_head=0; cab_primed=0;
+  cab_hp_l=cab_hp_r=cab_lp_l=cab_lp_r=0;
+);
+function cab_transform(hbase,ch,norm) local(p,i,base,idx) (
+  p=0; loop(cab_parts,
+    base=hbase+p*128; memset(base,0,128);
+    i=0; loop(64,
+      idx=p*64+i;
+      idx<cab_frames ? base[i]=cab_raw[idx*cab_channels+ch]*norm;
+      i+=1;
+    );
+    // Packed real FFT: DC/Nyquist at [0]/[1], remaining complex bins permuted.
+    fft_real(base,128);
+    i=0; loop(128,!finite(base[i]) ? cab_transform_ok=0; i+=1;); p+=1;
+  );
+);
+function cab_load() local(f,ch,rate,count,want,got,i,peak,norm,val,ok) (
+  cab_ready=0; cab_mix=0; cab_frames=0; cab_parts=0; cab_running=0;
+  strcpy(#cab_active,""); strcpy(#cab_status,"No IR selected: amp-only bypass");
+  ok=strlen(#cab_file)>=4;
+  ok ? (strcpy_substr(#cab_ext,#cab_file,strlen(#cab_file)-4); ok=stricmp(#cab_ext,".wav")===0;);
+  ok ? (
+    f=file_open(#cab_file);
+    f<0 ? strcpy(#cab_status,"Missing WAV: amp-only bypass") : (
+      ch=0; rate=0; file_riff(f,ch,rate);
+      ok=(ch===1 || ch===2) && (rate===44100 || rate===48000);
+      ok ? (
+        cab_source_rate=rate;
+        // Official REAPER 6.29+ host resampling request, before any reads.
+        ch='rqsr'; rate=srate; file_riff(f,ch,rate);
+        cab_channels=ch; count=file_avail(f);
+        ok=(ch===1 || ch===2) && finite(count) && count>0 && floor(count/ch)*ch===count;
+        ok ? (
+          want=count/ch;
+          cab_length>0 ? want=min(want,max(1,floor(srate*cab_length/1000)));
+          // Never silently truncate to capacity. Explicit user crop is allowed.
+          want>4096 ? (ok=0; strcpy(#cab_status,"IR exceeds live limit 4096 frames; set Maximum Length to 80 ms at 44.1/48 kHz: shorten explicitly or use ReaVerb");) : (
+            got=file_mem(f,cab_raw,want*ch); ok=got===want*ch;
+            peak=0; i=0;
+            loop(got,
+              val=cab_raw[i]; !finite(val) ? ok=0;
+              peak=max(peak,abs(val)); i+=1;
+            );
+            ok ? (
+              // Audio SRC keeps sample amplitudes; FIR coefficients need area correction.
+              norm=cab_source_rate/srate;
+              cab_mode===1 ? norm*=db(-18);
+              (cab_mode===2 || cab_mode===3) && peak>0 ? (
+                norm=(cab_mode===2 ? 1 : db(-18))/peak;
+              );
+              cab_frames=want; cab_parts=ceil(want/64);
+              cab_transform_ok=1;
+              cab_transform(cab_hl,0,norm);
+              cab_transform(cab_hr,ch===1 ? 0 : 1,norm);
+              cab_reset(); cab_ready=cab_transform_ok;
+              cab_ready ? strcpy(#cab_active,#cab_file);
+              peak>0 ? sprintf(#cab_status,"Loaded %d frames / %d ch; 64-sample engine latency",want,ch) : strcpy(#cab_status,"Silent IR loaded (wet output is silence)");
+              !cab_ready ? strcpy(#cab_status,"IR transform overflow: amp-only bypass");
+            ) : strcpy(#cab_status,"Invalid/short WAV data: amp-only bypass");
+          );
+        ) : strcpy(#cab_status,"Invalid WAV data: amp-only bypass");
+      ) : strcpy(#cab_status,"Requires mono/stereo 44.1/48 kHz WAV: amp-only bypass");
+      file_close(f);
+    );
+  );
+  cab_reload=0; cab_fade_request=0;
+);
+// Bounded single-rate real-FFT OLA: <=64 partitions, one fixed task per 64 frames.
+// No large tail FFT, long-period ring, or variable-size transform in the sample loop.
+function cab_block_channel(input,history,hbank,output,overlap,head,parts,work,acc)
+local(i,p,idx,xp,hp,j,last_r,last_i) (
+  memset(work,0,128); memcpy(work,input,64);
+  fft_real(work,128); memcpy(history+head*128,work,128);
+  memset(acc,0,128); p=0;
+  loop(parts,
+    idx=head-p; idx<0 ? idx+=parts;
+    xp=history+idx*128; hp=hbank+p*128;
+    memcpy(work,xp,128);
+    // The first packed pair is two REAL bins, never one complex number.
+    work[0]*=hp[0]; work[1]*=hp[1];
+    // Native multiply works on even groups. Handle the final packed pair explicitly.
+    convolve_c(work+2,hp+2,62);
+    last_r=work[126]; last_i=work[127];
+    work[126]=last_r*hp[126]-last_i*hp[127];
+    work[127]=last_r*hp[127]+last_i*hp[126];
+    i=0; loop(32,
+      j=4*i; acc[j]+=work[j]; acc[j+1]+=work[j+1];
+      acc[j+2]+=work[j+2]; acc[j+3]+=work[j+3]; i+=1;
+    ); p+=1;
+  );
+  ifft_real(acc,128); i=0;
+  // Two forward real transforms plus inverse have convolution scale 4*N.
+  // For N=128 the unity-IR host calibration is 512 (not complex-FFT scaling).
+  loop(64,
+    output[i]=acc[i]/512+overlap[i]; overlap[i]=acc[i+64]/512; i+=1;
+  );
+);
+// END CABINET FUNCTIONS
+
+pre_zero=soft(0.22); pi_zero=soft(0.04);
+mat=0; inv=64;
+ct_g=2*srate*0.0000000005; cb_g=cm_g=2*srate*0.000000022;
+input_hp=pole(35); input_lp=pole(18000); bright_p=pole(190);
+dc_p=pole(10); presence_p=pole(1200); output_p=pole(10000);
+smooth_a=1-exp(-1/(0.020*srate)); ramp=1/(0.010*srate);
+sag_attack=1-exp(-1/(0.010*srate)); sag_release=1-exp(-1/(0.150*srate));
+lchan.reset(); rchan.reset(); initialized=0; counter=0; pdc_delay=0;
+
+// Compact, explicit disjoint regions. The amplifier owns [0..88].
+// Each spectrum is 128 real slots and stays within one 65536-item page.
+cab_hl=65536; cab_hr=73728; cab_xl=81920; cab_xr=90112;
+cab_raw=131072; cab_fft=1024; cab_sum=1280;
+cab_ol=1536; cab_or=1600; cab_il=1664; cab_ir=1728;
+cab_ovl=1792; cab_ovr=1856; cab_dl=1920; cab_dr=1984;
+memset(1024,0,1024);
+cab_dpos=0; cab_parts=0; cab_ready=0; cab_running=0;
+// Preserve cab_restored if @serialize has already loaded project state.
+cab_mix=0; cab_reload=1; cab_fade_request=0; cab_initial_load=1;
+cab_mode=-1; cab_length=-1; cab_initialized=0; cab_pos=0; cab_head=0; cab_primed=0;
+strcpy_fromslider(#cab_last_dropdown,slider19);
+strcpy(#cab_status,"Select WAV in REAPER Data/BostoneIR; stop transport to load");
+
+@slider
+enable_t=slider1>=0.5;
+input_t=db(bound(slider2,-24,24)); pre_t=db(bound(slider3,0,36));
+bass_t=bound(slider4,0,10)/10; mid_t=bound(slider5,0,10)/10; treble_t=bound(slider6,0,10)/10;
+presence_t=1.2*bound(slider7,0,10)/10; power_t=db(bound(slider8,0,24));
+tight_t=pole(70*exp(log(300/70)*bound(slider9,0,10)/10)); output_t=db(bound(slider10,-36,0));
+!initialized ? (
+  enable_g=enable_t; input_g=input_t; pre_g=pre_t;
+  bass_g=bass_t; mid_g=mid_t; treble_g=treble_t;
+  presence_g=presence_t; power_g=power_t; tight_g=tight_t; output_g=output_t;
+  rebuild(); initialized=1;
+);
+
+// Cabinet controls: leave original amp targets and smoothing above untouched.
+cab_enable=slider11>=0.5; cab_level_t=db(bound(slider12,-36,12));
+cab_wet_t=slider14<=-120 ? 0 : db(bound(slider14,-120,6));
+cab_dry_t=slider15<=-120 ? 0 : db(bound(slider15,-120,6));
+cab_hp_t=pole(max(1,bound(slider16,0,2000))); cab_hpm_t=slider16>0;
+cab_lp_t=pole(max(1,bound(slider17,0,20000))); cab_lpm_t=slider17>0;
+new_mode=floor(bound(slider13,0,3)); new_length=bound(slider18,0,500);
+(new_mode!==cab_mode || new_length!==cab_length) ? cab_reload=1;
+cab_mode=new_mode; cab_length=new_length;
+strcpy_fromslider(#cab_dropdown,slider19);
+cab_restored ? (
+  strcpy(#cab_last_dropdown,#cab_dropdown); cab_restored=0;
+) : (strcmp(#cab_dropdown,#cab_last_dropdown)!==0 || strlen(#cab_file)===0) ? (
+  cab_pick(); strcpy(#cab_last_dropdown,#cab_dropdown); cab_reload=1;
+);
+!cab_initialized ? (
+  cab_level_g=cab_level_t; cab_wet_g=cab_wet_t; cab_dry_g=cab_dry_t;
+  cab_hp_g=cab_hp_t; cab_lp_g=cab_lp_t; cab_hpm_g=cab_hpm_t; cab_lpm_g=cab_lpm_t;
+  cab_initialized=1;
+);
+pdc_delay=64; pdc_bot_ch=0; pdc_top_ch=2;
+
+@block
+pdc_delay=64; pdc_bot_ch=0; pdc_top_ch=2;
+cab_initial_load ? (
+  cab_load(); strcpy_fromslider(#cab_last_dropdown,slider19); cab_restored=0; cab_initial_load=0;
+);
+cab_fade_request=cab_reload && play_state===0;
+cab_fade_request && cab_mix===0 ? cab_load();
+
+@sample
+// Finite dry samples are preserved at bypass, including samples outside nominal audio range.
+dry_l=finite(spl0) ? spl0 : 0; dry_r=finite(spl1) ? spl1 : 0;
+input_g+=smooth_a*(input_t-input_g); pre_g+=smooth_a*(pre_t-pre_g);
+bass_g+=smooth_a*(bass_t-bass_g); mid_g+=smooth_a*(mid_t-mid_g); treble_g+=smooth_a*(treble_t-treble_g);
+presence_g+=smooth_a*(presence_t-presence_g); power_g+=smooth_a*(power_t-power_g);
+tight_g+=smooth_a*(tight_t-tight_g); output_g+=smooth_a*(output_t-output_g);
+enable_g+=bound(enable_t-enable_g,-ramp,ramp);
+counter+=1;
+counter>=16 ? (
+  counter=0;
+  abs(bass_g-last_b)+abs(mid_g-last_m)+abs(treble_g-last_t)>0.0000001 ? rebuild();
+);
+// Keep both amplifiers running in bypass, avoiding stale tails on re-enable.
+wet_l=lchan.amp(dry_l); wet_r=rchan.amp(dry_r);
+enable_g === 0 ? (spl0=dry_l; spl1=dry_r;) : (
+  spl0=(1-enable_g)*dry_l+enable_g*wet_l;
+  spl1=(1-enable_g)*dry_r+enable_g*wet_r;
+);
+
+// CABINET AFTER UNCHANGED v0.3 AMP OUTPUT (including amp's own bypass).
+cab_in_l=spl0; cab_in_r=spl1;
+cab_al=cab_dl[cab_dpos]; cab_ar=cab_dr[cab_dpos];
+cab_dl[cab_dpos]=cab_in_l; cab_dr[cab_dpos]=cab_in_r;
+cab_dpos+=1; cab_dpos>=64 ? cab_dpos=0;
+cab_wl=0; cab_wr=0;
+// No convolution work when fully bypassed. Re-enable clears stale history and
+// primes behind the unchanged dry delay before the existing 10 ms crossfade.
+cab_should_run=cab_enable || cab_mix>0;
+cab_ready && cab_should_run ? (
+  !cab_running ? (cab_reset(); cab_running=1;);
+  cab_wl=cab_ol[cab_pos]; cab_wr=cab_or[cab_pos];
+  cab_il[cab_pos]=finite(cab_in_l) ? cab_in_l : 0;
+  cab_ir[cab_pos]=finite(cab_in_r) ? cab_in_r : 0;
+  cab_pos+=1;
+  cab_pos>=64 ? (
+    cab_pos=0;
+    cab_block_channel(cab_il,cab_xl,cab_hl,cab_ol,cab_ovl,cab_head,cab_parts,cab_fft,cab_sum);
+    cab_block_channel(cab_ir,cab_xr,cab_hr,cab_or,cab_ovr,cab_head,cab_parts,cab_fft,cab_sum);
+    cab_head+=1; cab_head>=cab_parts ? cab_head=0; cab_primed=1;
+  );
+) : cab_running=0;
+cab_level_g+=smooth_a*(cab_level_t-cab_level_g);
+cab_wet_g+=smooth_a*(cab_wet_t-cab_wet_g); cab_dry_g+=smooth_a*(cab_dry_t-cab_dry_g);
+cab_hp_g+=smooth_a*(cab_hp_t-cab_hp_g); cab_lp_g+=smooth_a*(cab_lp_t-cab_lp_g);
+cab_hpm_g+=bound(cab_hpm_t-cab_hpm_g,-ramp,ramp); cab_lpm_g+=bound(cab_lpm_t-cab_lpm_g,-ramp,ramp);
+cab_hp_l+=cab_hp_g*(cab_wl-cab_hp_l); cab_hp_r+=cab_hp_g*(cab_wr-cab_hp_r);
+cab_wl-=cab_hpm_g*cab_hp_l; cab_wr-=cab_hpm_g*cab_hp_r;
+cab_lp_l+=cab_lp_g*(cab_wl-cab_lp_l); cab_lp_r+=cab_lp_g*(cab_wr-cab_lp_r);
+cab_wl+=cab_lpm_g*(cab_lp_l-cab_wl); cab_wr+=cab_lpm_g*(cab_lp_r-cab_wr);
+cab_target=cab_enable && cab_ready && cab_primed && !cab_fade_request;
+cab_mix+=bound(cab_target-cab_mix,-ramp,ramp);
+cab_target_l=cab_dry_g*cab_al+cab_wet_g*cab_level_g*cab_wl;
+cab_target_r=cab_dry_g*cab_ar+cab_wet_g*cab_level_g*cab_wr;
+(!finite(cab_target_l) || !finite(cab_target_r) || abs(cab_target_l)>1000000000000 || abs(cab_target_r)>1000000000000) ? (
+  cab_ready=0; cab_mix=0; strcpy(#cab_status,"Convolution fault: amp-only bypass");
+);
+cab_mix===0 ? (spl0=cab_al; spl1=cab_ar;) : (
+  spl0=(1-cab_mix)*cab_al+cab_mix*cab_target_l;
+  spl1=(1-cab_mix)*cab_ar+cab_mix*cab_target_r;
+);
+
+@serialize
+// Save a filename, not a menu index: folder reorder must not change the IR.
+// Capture mode BEFORE I/O. Saving and identical reads must not trigger audio I/O.
+cab_serial_read=file_avail(0)>=0;
+cab_serial_read ? strcpy(#cab_prior_restore,#cab_file);
+cab_format=1; file_var(0,cab_format); file_string(0,#cab_file);
+cab_serial_read ? cab_restore_selection();
+
+@gfx 560 70
+// Functional filename/status only. Native sliders remain the entire control UI.
+gfx_set(0.85,0.85,0.85,1); gfx_x=8; gfx_y=8;
+strlen(#cab_file)>0 ? gfx_drawstr(#cab_file) : gfx_drawstr("Cabinet: no IR selected");
+gfx_x=8; gfx_y=28;
+cab_reload ? gfx_drawstr("IR change queued: stop transport (mute monitoring while loading)") : gfx_drawstr(#cab_status);
+gfx_x=8; gfx_y=48; gfx_drawstr("[Reload]  WAV folder: REAPER resource path / Data / BostoneIR");
+gfx_getchar(); cab_mouse=mouse_cap&1;
+cab_mouse && !cab_mouse_last && mouse_y>=48 ? cab_reload=1;
+cab_mouse_last=cab_mouse;

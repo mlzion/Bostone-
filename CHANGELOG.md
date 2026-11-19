@@ -1,5 +1,59 @@
 # Changelog
 
+## Plexi v0.4 — remaining cabinet dropout correction (2026-11-19)
+
+- Replace bursty nonuniform convolution with bounded 64-frame/128-point real FFT
+  partitions and native spectral products; correctly handle packed endpoints,
+  final complex pair and host-calibrated 512 inverse convolution scale.
+- Reduce capacity to 4096 processed IR frames. Explicit 80 ms crop fits native
+  44.1/48 kHz; longer files reject visibly or use external ReaVerb.
+- Avoid redundant same-filename serialization reload requests; retain explicit
+  reload and changed-file handling. Preserve amp DSP, all controls and dry ring.
+- 45 automated tests and 16 actual REAPER 7.47 Linux 30-second cases pass,
+  including continuity, memory guards, single loads and simulated same-file
+  restore notifications. Windows live deadlines and exact dropout trigger remain
+  unverified; identified workload/reload hazards are removed, not claimed reproduced.
+- Review supplied references and record future amp recommendations without
+  importing third-party code/assets or changing amplifier processing.
+
+## Plexi v0.4 — continuous audio / real-time workload correction (2026-11-18)
+
+- Replaced full-length interpreted 64-frame partition convolution with a
+  nonuniform 64-frame head / 256-frame tail and native complex multiplication.
+  Preserved 64-sample global latency, IR timing/gain and all cabinet controls.
+- Suspended FFT work after Cabinet bypass settles. Re-enable clears/re-primes
+  cabinet histories before fading in; the independent dry delay always advances.
+- Added source-derived disjoint memory/page checks, multi-second stream/direct
+  FIR regressions, boundary impulses and a native REAPER batch runner with
+  load/FFT counters and memory canaries. v0.3 amplifier DSP is unchanged.
+- 44 unit tests and 10 REAPER 7.47 Linux render cases pass. Native amp bypass
+  matches v0.3 exactly; FIR output matches within a 24-bit half-LSB. No repeated
+  loading or buffer-canary corruption occurred in those runs.
+- Found a demonstrated real-time budget risk, not a proven indexing defect:
+  near-capacity old rendering exceeded audio duration, while new rendering is
+  substantially faster. Windows live blips were not reproduced in offline Linux;
+  real-time Windows, device CPU/xruns and listening confirmation remain pending.
+
+
+## Bostone Plexi v0.4 — integrated cabinet IR (2026-11-18)
+
+- Added separate `Bostone_Plexi_v0.4.jsfx`, preserving the v0.3 amp's original
+  functions, initialization, controls/defaults and sample-processing code.
+- Added bounded mono/stereo WAV loading, native requested-rate decoding/SRC,
+  explicit raw/fixed attenuation/linked peak modes, IR level, wet/dry, wet-only
+  HP/LP, user-selected tail crop, saved filename and cabinet bypass.
+- Added original 64-frame partitioned FFT overlap-add with fixed 64-sample
+  latency/PDC and aligned bypass. IR timing and raw gain are retained; no
+  default peak normalization, onset shift, silent truncation or limiter.
+- Added native Data/BostoneIR selector and text status/reload area. Synchronous
+  replacements queue until stopped/faded; missing/invalid/oversized IRs fail
+  safely to aligned amp-only output. Capacity is 32768 processed IR frames.
+- Added synthetic fixture/numerical/source tests, usage instructions, researched
+  ReaVerb mappings, and explicit decoder/filter/SRC/runtime matching limits.
+- No v0.3 changes, cabinet assets, waveform display, custom skin, hum removal,
+  extra amplifier modeling or automatic merge. REAPER runtime/listening/CPU
+  and exact ReaVerb parity remain pending.
+
 ## Bostone Preamp v0.2.1 — expanded EQ range (2026-11-18)
 
 - Added separate `Bostone_Preamp_v0.2.1.jsfx` / `Bostone Preamp v0.2.1` identity.

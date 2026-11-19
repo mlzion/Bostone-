@@ -140,6 +140,40 @@ is in Plexi. REAPER compilation/listening/CPU/actual host oversampling tests
 remain pending; automated numerical checks do not establish host compatibility.
 Do not merge the Plexi PR automatically.
 
+## Bostone Plexi v0.4 — integrated cabinet IR loader
+
+Install [Bostone_Plexi_v0.4.jsfx](jsfx/Bostone_Plexi_v0.4.jsfx) alongside v0.3;
+select **Bostone Plexi v0.4**. The amplifier's original DSP, ten controls and
+settings are unchanged. Cabinet convolution follows its output, with mono/stereo
+44.1/48 kHz WAV loading, host rate conversion, explicit raw/attenuation/peak modes,
+IR level, wet/dry, wet HP/LP, optional length crop, saved filename and bypass.
+
+Place external WAVs in the REAPER resource directory's **Data/BostoneIR** folder
+and select one using the native IR WAV dropdown. No IR asset is bundled. The
+compact status area displays the filename and errors; there is no waveform or
+skin. Stop transport and mute monitoring for synchronous loading/replacement.
+
+The engine adds a fixed **64 samples** (1.33 ms at 48 kHz), declared to REAPER;
+dry and cabinet bypass share that delay. Maximum IR size is **4096 processed
+frames**; oversized IRs are rejected, never silently trimmed. No automatic peak
+normalization or gain compensation is enabled by default. For long IRs or more
+demanding browsing/hot-swap workflows, use v0.3 plus ReaVerb.
+
+- [Installation, IR controls, persistence and limitations](docs/plexi-v0.4-cabinet.md)
+- [Engine design, memory/latency and researched ReaVerb mapping](docs/plexi-v0.4-technical.md)
+- [Automated checks and REAPER comparison checklist](docs/plexi-v0.4-testing.md)
+
+The continuous-audio correction passes native REAPER 7.47 Linux batch tests
+with buffer guards, exact aligned bypass and sparse-FIR comparisons. Windows
+real-time monitoring, UI persistence, audible ReaVerb parity and device CPU/xruns
+still require validation. No automatic merge is performed.
+
+The latest cabinet correction uses bounded 64-frame real-FFT partitions, not a
+nonuniform long tail. Select an explicit 80 ms crop for long files at 44.1/48 kHz,
+or use external ReaVerb. **45 automated tests and 16 native REAPER Linux cases
+of 30 seconds passed**; Windows live confirmation remains pending. See the
+[reference review and future amplifier recommendations](docs/plexi-v0.4-reference-review.md).
+
 ## Bostone Preamp v0.2.1 — expanded pre-EQ range
 
 Install [Bostone_Preamp_v0.2.1.jsfx](jsfx/Bostone_Preamp_v0.2.1.jsfx) alongside

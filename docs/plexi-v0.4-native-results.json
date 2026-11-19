@@ -1,0 +1,82 @@
+[
+  {
+    "case": "dry",
+    "rate": 44100,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 0.649906804001148,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "amp",
+    "rate": 44100,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 0.64621636999982,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "wet",
+    "rate": 44100,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 1.235803001000022,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  },
+  {
+    "case": "missing",
+    "rate": 44100,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 0.6246472469993023,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "toggle",
+    "rate": 44100,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 1.028392875999998,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  },
+  {
+    "case": "dry",
+    "rate": 48000,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 0.6196326730005239,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "amp",
+    "rate": 48000,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 0.6201367730009224,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "wet",
+    "rate": 48000,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 1.362900885000272,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  },
+  {
+    "case": "missing",
+    "rate": 48000,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 0.6720476129994495,
+    "max_error": 0.0,
+    "passed": true
+  },
+  {
+    "case": "toggle",
+    "rate": 48000,
+    "version": "7.47/linux-x86_64",
+    "render_seconds": 1.1429545889986912,
+    "max_error": 5.960464477539063e-08,
+    "passed": true
+  }
+]
