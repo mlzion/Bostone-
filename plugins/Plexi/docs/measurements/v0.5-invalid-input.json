@@ -1,0 +1,68 @@
+[
+  {
+    "rate": 44100,
+    "case": "rapid-mode-and-gain-automation",
+    "injected_invalid": true,
+    "version": "7.47/linux-x86_64",
+    "audio_seconds": 10,
+    "render_seconds": 2.2424242650013184,
+    "max_step": 0.3735618591308594,
+    "v04_reference_max_step": 0.3712460994720459,
+    "peak_64_sample_wall_seconds": 0.013083195686340332,
+    "passed": true
+  },
+  {
+    "rate": 44100,
+    "case": "mode-only-transitions",
+    "injected_invalid": true,
+    "version": "7.47/linux-x86_64",
+    "audio_seconds": 10,
+    "render_seconds": 2.33097982199979,
+    "max_step": 0.00026297569274902344,
+    "passed": true
+  },
+  {
+    "rate": 48000,
+    "case": "rapid-mode-and-gain-automation",
+    "injected_invalid": true,
+    "version": "7.47/linux-x86_64",
+    "audio_seconds": 10,
+    "render_seconds": 2.356772443999944,
+    "max_step": 0.3639644384384155,
+    "v04_reference_max_step": 0.36092889308929443,
+    "peak_64_sample_wall_seconds": 0.003854823112487793,
+    "passed": true
+  },
+  {
+    "rate": 48000,
+    "case": "mode-only-transitions",
+    "injected_invalid": true,
+    "version": "7.47/linux-x86_64",
+    "audio_seconds": 10,
+    "render_seconds": 2.1723761739995098,
+    "max_step": 0.0002288818359375,
+    "passed": true
+  },
+  {
+    "rate": 96000,
+    "case": "rapid-mode-and-gain-automation",
+    "injected_invalid": true,
+    "version": "7.47/linux-x86_64",
+    "audio_seconds": 10,
+    "render_seconds": 3.7689840590028325,
+    "max_step": 0.25171494483947754,
+    "v04_reference_max_step": 0.24346923828125,
+    "peak_64_sample_wall_seconds": 0.004109573364257812,
+    "passed": true
+  },
+  {
+    "rate": 96000,
+    "case": "mode-only-transitions",
+    "injected_invalid": true,
+    "version": "7.47/linux-x86_64",
+    "audio_seconds": 10,
+    "render_seconds": 3.845821609000268,
+    "max_step": 8.034706115722656e-05,
+    "passed": true
+  }
+]
