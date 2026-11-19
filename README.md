@@ -173,3 +173,20 @@ nonuniform long tail. Select an explicit 80 ms crop for long files at 44.1/48 kH
 or use external ReaVerb. **45 automated tests and 16 native REAPER Linux cases
 of 30 seconds passed**; Windows live confirmation remains pending. See the
 [reference review and future amplifier recommendations](docs/plexi-v0.4-reference-review.md).
+
+## Bostone Preamp v0.2.1 — expanded pre-EQ range
+
+Install [Bostone_Preamp_v0.2.1.jsfx](jsfx/Bostone_Preamp_v0.2.1.jsfx) alongside
+older files; the FX browser displays **Bostone Preamp v0.2.1**. v0.1, v0.2 and
+Plexi v0.3 are unchanged. Defaults and all other processing remain as in v0.2.
+
+| Control | v0.2.1 range | Default |
+| --- | --- | --- |
+| Pre Low Cut | 40–1000 Hz | 80 Hz |
+| Pre Low-Mid Frequency | 150–2000 Hz | 400 Hz |
+| Pre High Cut | 400–10000 Hz | 10000 Hz |
+
+Use **Legacy** Pre-EQ Mode with Pre-EQ enabled to try an 800 Hz high-pass before
+Plexi; these three controls remain inactive in the alternative Band-pass mode.
+See [installation, compatibility notes and test plan](docs/preamp-v0.2.1.md).
+Actual REAPER compilation/listening and click checks remain pending.

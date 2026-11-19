@@ -134,3 +134,13 @@ There is no @block section; coefficient targets are prepared in @slider and
 sample processing occurs in @sample. Static lint checks both JSFX files, but
 REAPER parsing, host automation, save/reload behavior, CPU, and listening quality
 are pending because REAPER is unavailable in this workspace.
+
+## v0.2.1 expanded pre-EQ controls
+
+The separate `Bostone_Preamp_v0.2.1.jsfx` retains v0.2 DSP equations and changes
+only its identity and three slider/target ranges: HP 40–1000 Hz, pre-bell center
+150–2000 Hz, and LP 400–10000 Hz. All defaults, filter Q/slopes, gains, modes,
+stereo states and smoothing remain unchanged. Band-pass mode still replaces
+the HP/bell/LP path, so these controls are audible only in Legacy pre-EQ mode.
+The old v0.1/v0.2 files and Plexi are untouched. See
+[version-specific installation and validation](preamp-v0.2.1.md).
